@@ -1,0 +1,113 @@
+/* Print Styles */
+@media print {
+
+    /* Hide everything by default */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Hide scrollbars, headers, sidebars */
+    .erp-layout,
+    .modal-overlay,
+    .sidebar,
+    .top-bar {
+        display: none !important;
+    }
+
+    /* Show only the printable area */
+    #printable-area,
+    #printable-area * {
+        visibility: visible;
+    }
+
+    #printable-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        /* Standard Thermal Width */
+        margin: 0;
+        padding: 0;
+    }
+}
+
+/* Thermal Receipt Styling (Visible only inside printable-area during print, or for preview) */
+.thermal-receipt {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    width: 72mm;
+    /* Safe margin inside 80mm */
+    margin: 0 auto;
+    text-transform: uppercase;
+    color: black;
+    background: white;
+    line-height: 1.2;
+}
+
+.thermal-receipt h2 {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 0 5px 0;
+}
+
+.thermal-receipt p {
+    margin: 0;
+    text-align: center;
+}
+
+.thermal-receipt .header {
+    margin-bottom: 10px;
+}
+
+.thermal-receipt hr.dashed {
+    border: none;
+    border-top: 1px dashed black;
+    margin: 5px 0;
+}
+
+.thermal-receipt .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.thermal-receipt .meta-row.data {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.thermal-receipt .item-row {
+    margin-bottom: 5px;
+}
+
+.thermal-receipt .item-desc {
+    font-weight: bold;
+}
+
+.thermal-receipt .item-nums {
+    display: flex;
+    justify-content: space-between;
+    padding-left: 10px;
+}
+
+.thermal-receipt .footer {
+    margin-top: 10px;
+}
+
+.thermal-receipt .total-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.thermal-receipt .total-row.big {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.thermal-receipt .legal {
+    text-align: center;
+    font-size: 10px;
+    margin-top: 10px;
+}
