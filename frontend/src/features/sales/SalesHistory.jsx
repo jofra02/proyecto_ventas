@@ -15,16 +15,28 @@ const SalesHistory = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [products, setProducts] = useState({});
     const [customers, setCustomers] = useState({});
+    const [storeSettings, setStoreSettings] = useState(null);
 
     useEffect(() => {
         // Fetch sales and products to map names
         const fetchData = async () => {
             try {
-                const [salesRes, prodRes, custRes] = await Promise.all([
+                const [salesRes, prodRes, custRes, nameRes, addrRes, cuitRes, ivaRes] = await Promise.all([
                     api.get('/sales/'),
                     api.get('/products/'),
-                    api.get('/customers/')
+                    api.get('/customers/'),
+                    api.get('/admin/settings/store_name').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_address').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_cuit').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_iva_status').catch(() => ({ data: { value: '' } }))
                 ]);
+
+                setStoreSettings({
+                    store_name: nameRes.data.value,
+                    store_address: addrRes.data.value,
+                    store_cuit: cuitRes.data.value,
+                    store_iva_status: ivaRes.data.value
+                });
 
                 const prodMap = {};
                 prodRes.data.forEach(p => prodMap[p.id] = p);
@@ -61,6 +73,7 @@ const SalesHistory = () => {
                     sale={selectedSale}
                     customer={selectedSale?.customer_id ? customers[selectedSale.customer_id] : null}
                     items={selectedSale?.items.map(i => ({ ...i, name: products[i.product_id]?.name })) || []}
+                    storeInfo={storeSettings}
                 />
             </div>
 

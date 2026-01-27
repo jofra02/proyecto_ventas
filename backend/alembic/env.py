@@ -22,6 +22,8 @@ from modules.accounts_receivable.domain.models import CustomerLedger
 from modules.catalog.domain.models import Product, ProductBarcode
 from modules.picking.domain.models import PickTask, PickScanEvent
 from modules.iam.domain.models import User
+from modules.suppliers.domain.models import Supplier
+from modules.admin.domain.models import SystemSetting
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
