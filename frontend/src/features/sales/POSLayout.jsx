@@ -1,9 +1,11 @@
 import React from 'react';
-import { ArrowLeft, Search, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { ArrowLeft, Search, LogOut } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const POSLayout = ({ children }) => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isEmployee = user?.role === 'EMPLOYEE';
@@ -15,21 +17,21 @@ const POSLayout = ({ children }) => {
           {!isEmployee && (
             <button className="back-btn glass-effect" onClick={() => navigate('/')}>
               <ArrowLeft size={18} />
-              <span>Exit Sale Mode</span>
+              <span>{t('Exit Sale Mode')}</span>
             </button>
           )}
           <div className="pos-search">
             <Search size={18} className="search-icon" />
-            <input type="text" placeholder="Scan barcode or search item..." autoFocus />
+            <input type="text" placeholder={t('Scan barcode or search item...')} autoFocus />
           </div>
         </div>
         <div className="pos-info">
           {isEmployee ? (
             <button className="logout-btn-pos" onClick={logout}>
-              <LogOut size={16} /> Logout
+              <LogOut size={16} /> {t('Logout')}
             </button>
           ) : (
-            <div className="register-status">Register #1 • Online</div>
+            <div className="register-status">{t('Register #1 • Online')}</div>
           )}
         </div>
       </header>

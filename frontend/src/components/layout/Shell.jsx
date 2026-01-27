@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../../services/api';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -11,11 +12,13 @@ import {
   CreditCard,
   LogOut,
   Store, // For Sale Mode
-  Settings
+  Settings,
+  Truck
 } from 'lucide-react';
 import Footer from './Footer';
 
 import { hasAccess, PERMISSIONS } from '../../utils/rbac';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const SidebarItem = ({ to, icon: Icon, label }) => (
   <NavLink
@@ -30,9 +33,69 @@ const SidebarItem = ({ to, icon: Icon, label }) => (
 const AppShell = ({ children }) => {
   console.log("AppShell Rendering");
   const { logout, user } = useAuth();
+  const { t, language, changeLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const isDashboard = location.pathname === '/';
+
+  // Navigation Configuration
+  const NAV_SECTIONS = [
+    {
+      title: t('Overview'),
+      items: [
+        { to: '/', icon: LayoutDashboard, label: t('Dashboard'), perm: PERMISSIONS.VIEW_DASHBOARD, module: 'iam' } // Core module?
+      ]
+    },
+    {
+      title: t('Operations'),
+      items: [
+        { to: '/catalog', icon: Package, label: t('Products'), perm: PERMISSIONS.MANAGE_CATALOG, module: 'catalog' },
+        { to: '/inventory', icon: Warehouse, label: t('Inventory'), perm: PERMISSIONS.MANAGE_INVENTORY, module: 'inventory' },
+        { to: '/suppliers', icon: Truck, label: t('Providers'), perm: PERMISSIONS.MANAGE_CATALOG, module: 'suppliers' },
+        { to: '/sales', icon: ShoppingCart, label: t('Sales'), perm: PERMISSIONS.VIEW_SALES, module: 'sales' },
+        { to: '/invoicing', icon: FileText, label: t('Invoices'), perm: null, module: 'invoicing' }
+      ]
+    },
+    {
+      title: t('CRM & Finance'),
+      items: [
+        { to: '/customers', icon: Users, label: t('Customers'), perm: PERMISSIONS.MANAGE_CUSTOMERS, module: 'customers' },
+        { to: '/payments', icon: CreditCard, label: t('Payments'), perm: PERMISSIONS.VIEW_PAYMENTS, module: 'payments' }
+      ]
+    }
+  ];
+
+  // Admin section appended if user is admin (assumed core/admin module)
+  if (user?.role === 'ADMIN') {
+    NAV_SECTIONS.push({
+      title: t('Admin'),
+      items: [
+        { to: '/users', icon: Users, label: t('Staff'), perm: null, module: 'iam' },
+        { to: '/admin/settings', icon: Settings, label: t('Settings'), perm: null } // Core component
+      ]
+    });
+  }
+
+  const [activeModules, setActiveModules] = useState([]);
+  const [loadingModules, setLoadingModules] = useState(true);
+
+  useEffect(() => {
+    // Fetch active modules from backend
+    // Assuming GET /admin/modules returns ["catalog", "inventory", ...]
+    api.get('/admin/modules')
+      .then(res => setActiveModules(res.data))
+      .catch(err => {
+        console.error("Failed to load modules config", err);
+        // Fallback: Enable all if fetch fails? Or empty?
+        // Let's fallback to assuming all defined in frontend are available in dev, 
+        // but for prod logic we should be strict.
+        // For now, let's auto-enable common ones or EVERYTHING for safety if API fails?
+        // Or better, just show partial.
+        // Let's assume everything is active if API fails to avoid locking out.
+        setActiveModules(['catalog', 'inventory', 'suppliers', 'sales', 'invoicing', 'customers', 'payments', 'iam', 'admin']);
+      })
+      .finally(() => setLoadingModules(false));
+  }, []);
 
   return (
     <div className="erp-layout">
@@ -43,48 +106,39 @@ const AppShell = ({ children }) => {
         </div>
 
         <div className="nav-scroll">
-          <div className="nav-section">
-            <p className="section-title">Overview</p>
-            {hasAccess(user, PERMISSIONS.VIEW_DASHBOARD) && (
-              <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
-            )}
-          </div>
+          {NAV_SECTIONS.map((section, idx) => (
+            <div key={idx} className="nav-section">
+              {section.title && <p className="section-title">{section.title}</p>}
+              {section.items.map(item => {
+                // Check backend module existence
+                // activeModules is now list of objects {name, display_name}
+                // or strings (fallback)
+                // Let's normalize activeModules to lookup map for easier access?
+                // Or find in array.
 
-          <div className="nav-section">
-            <p className="section-title">Modules</p>
-            {hasAccess(user, PERMISSIONS.MANAGE_CATALOG) && (
-              <SidebarItem to="/catalog" icon={Package} label="Products" />
-            )}
-            {hasAccess(user, PERMISSIONS.MANAGE_INVENTORY) && (
-              <SidebarItem to="/inventory" icon={Warehouse} label="Inventory" />
-            )}
-            {hasAccess(user, PERMISSIONS.VIEW_SALES) && (
-              <SidebarItem to="/sales" icon={ShoppingCart} label="Sales History" />
-            )}
-            <SidebarItem to="/invoicing" icon={FileText} label="Invoices" />
-          </div>
+                let remoteModule = null;
+                if (item.module) {
+                  remoteModule = activeModules.find(m => (m.name || m) === item.module);
+                  if (!remoteModule && !loadingModules) return null;
+                }
 
-          <div className="nav-section">
-            <p className="section-title">CRM & Finance</p>
-            {hasAccess(user, PERMISSIONS.MANAGE_CUSTOMERS) && (
-              <SidebarItem to="/customers" icon={Users} label="Customers" />
-            )}
-            {hasAccess(user, PERMISSIONS.VIEW_PAYMENTS) && (
-              <SidebarItem to="/payments" icon={CreditCard} label="Payments" />
-            )}
-          </div>
+                // Check permission if defined
+                if (item.perm && !hasAccess(user, item.perm)) return null;
+
+                // Use the frontend defined label (already translated)
+                let label = item.label;
+
+                return (
+                  <SidebarItem key={item.to} to={item.to} icon={item.icon} label={label} />
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         <div className="sidebar-footer">
-          {user?.role === 'ADMIN' && (
-            <div className="nav-section" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
-              <p className="section-title">Admin</p>
-              <SidebarItem to="/users" icon={Users} label="Staff / IAM" />
-              <SidebarItem to="/admin/settings" icon={Settings} label="System Settings" />
-            </div>
-          )}
           <button onClick={logout} className="logout-btn">
-            <LogOut size={16} /> Logout
+            <LogOut size={16} /> {t('Logout')}
           </button>
         </div>
       </aside>
@@ -94,13 +148,14 @@ const AppShell = ({ children }) => {
         {/* Top Header */}
         <header className="top-bar">
           <div className="breadcrumbs">
-            <span>Dashboard</span> / <span>Overview</span>
+            {/* Simple dynamic breadcrumb based on path */}
+            <span className="capitalize">{location.pathname === '/' ? t('Dashboard') : t(location.pathname.split('/')[1]) || location.pathname.split('/')[1]}</span>
           </div>
           <div className="top-actions">
-            <span className="user-greeting">Hi, {user?.username}</span>
+            <span className="user-greeting">{t('Hi, ')}{user?.username}</span>
             <button className="primary-btn sale-mode-btn" onClick={() => navigate('/pos')}>
               <Store size={16} />
-              Open POS
+              {t('POS')}
             </button>
           </div>
         </header>
@@ -232,6 +287,21 @@ const AppShell = ({ children }) => {
           flex: 1;
           padding: 2rem;
           overflow-y: auto;
+        }
+
+        /* Custom Scrollbar for Sidebar */
+        .nav-scroll::-webkit-scrollbar {
+          width: 5px;
+        }
+        .nav-scroll::-webkit-scrollbar-track {
+          background: transparent; 
+        }
+        .nav-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.15); 
+          border-radius: 4px;
+        }
+        .nav-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.25); 
         }
       `}</style>
     </div>

@@ -14,6 +14,8 @@ import InvoiceList from './features/invoicing/InvoiceList'
 import PaymentList from './features/payments/PaymentList'
 import UserList from './features/iam/UserList'
 import SettingsView from './features/admin/views/SettingsView'
+import SupplierList from './features/suppliers/SupplierList'
+import { LanguageProvider } from './i18n/LanguageContext'
 
 const Protected = ({ children }) => {
   const { user, loading } = useAuth();
@@ -23,46 +25,43 @@ const Protected = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
-// ...
-
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-
-      {/* POS: Accessible by everyone including Employees */}
-      <Route path="/pos" element={
-        <Protected>
-          <RequireRole roles={['ADMIN', 'SUPERVISOR', 'EMPLOYEE']}>
-            <POS />
-          </RequireRole>
-        </Protected>
-      } />
-
-      {/* Dashboard & Modules: Only Admin/Supervisor */}
-      <Route path="/*" element={
-        <Protected>
-          <RequireRole roles={['ADMIN', 'SUPERVISOR']}>
-            <AppShell>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="users" element={<UserList />} />
-                <Route path="admin/settings" element={<SettingsView />} />
-                <Route path="catalog" element={<ProductList />} />
-                <Route path="inventory" element={<StockList />} />
-                <Route path="sales" element={<SalesHistory />} />
-                <Route path="customers" element={<CustomerList />} />
-                <Route path="customers/:id/account" element={<CustomerAccount />} />
-                <Route path="invoicing" element={<InvoiceList />} />
-                <Route path="payments" element={<PaymentList />} />
-                {/* ... other feature routes ... */}
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
-            </AppShell>
-          </RequireRole>
-        </Protected>
-      } />
-    </Routes>
+    <LanguageProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        {/* ... existing routes ... */}
+        <Route path="/pos" element={
+          <Protected>
+            <RequireRole roles={['ADMIN', 'SUPERVISOR', 'EMPLOYEE']}>
+              <POS />
+            </RequireRole>
+          </Protected>
+        } />
+        <Route path="/*" element={
+          <Protected>
+            <RequireRole roles={['ADMIN', 'SUPERVISOR']}>
+              <AppShell>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="users" element={<UserList />} />
+                  <Route path="admin/settings" element={<SettingsView />} />
+                  <Route path="catalog" element={<ProductList />} />
+                  <Route path="inventory" element={<StockList />} />
+                  <Route path="sales" element={<SalesHistory />} />
+                  <Route path="customers" element={<CustomerList />} />
+                  <Route path="customers/:id/account" element={<CustomerAccount />} />
+                  <Route path="invoicing" element={<InvoiceList />} />
+                  <Route path="payments" element={<PaymentList />} />
+                  <Route path="suppliers" element={<SupplierList />} />
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+              </AppShell>
+            </RequireRole>
+          </Protected>
+        } />
+      </Routes>
+    </LanguageProvider>
   )
 }
 

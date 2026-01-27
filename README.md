@@ -1,4 +1,4 @@
-# Enterprise ERP (AntiGravity)
+# Enterprise ERP
 
 A modern, full-stack ERP solution built with **FastAPI** (Python) and **React** (Vite).
 Features a modular monolith architecture designed for scalability and maintainability.

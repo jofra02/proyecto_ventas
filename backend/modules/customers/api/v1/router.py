@@ -47,3 +47,46 @@ async def update_customer(customer_id: int, data: CustomerCreate, db: AsyncSessi
     await db.commit()
     await db.refresh(customer)
     return customer
+
+from datetime import datetime, timedelta
+from sqlalchemy import func
+
+@router.get("/analytics/summary")
+async def get_customer_analytics(
+    days: int | None = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Returns total customers and new customers in the last N days (with trend).
+    """
+    # 1. Total Customers
+    total_stmt = select(func.count(Customer.id))
+    total_customers = (await db.execute(total_stmt)).scalar() or 0
+
+    # 2. New Customers (Current Period)
+    lookback = days if days else 7
+    cutoff_date = datetime.utcnow() - timedelta(days=lookback)
+    
+    new_stmt = select(func.count(Customer.id)).where(Customer.created_at >= cutoff_date)
+    new_customers = (await db.execute(new_stmt)).scalar() or 0
+
+    # 3. New Customers (Previous Period)
+    prev_cutoff = cutoff_date - timedelta(days=lookback)
+    prev_stmt = select(func.count(Customer.id)).where(
+        Customer.created_at >= prev_cutoff,
+        Customer.created_at < cutoff_date
+    )
+    prev_new_customers = (await db.execute(prev_stmt)).scalar() or 0
+
+    # 4. Calculate Trend
+    trend = 0.0
+    if prev_new_customers == 0:
+        trend = 100.0 if new_customers > 0 else 0.0
+    else:
+        trend = ((new_customers - prev_new_customers) / prev_new_customers) * 100.0
+
+    return {
+        "total_customers": total_customers,
+        "new_customers": new_customers,
+        "new_customers_trend": trend
+    }

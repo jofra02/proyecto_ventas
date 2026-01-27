@@ -2,12 +2,19 @@ import api from '../../../services/api';
 
 export const dashboardService = {
     // Sales Analytics
+    // Sales Analytics
     getSalesSummary: async (rangeParam = 7) => {
         const params = typeof rangeParam === 'object' ?
             { start_date: rangeParam.start.toISOString(), end_date: rangeParam.end.toISOString() } :
             { days: rangeParam };
-        const response = await api.get('/sales/analytics/summary', { params });
-        return response.data;
+
+        // Fetch both sales and customer data efficiently
+        const [salesRes, customersRes] = await Promise.all([
+            api.get('/sales/analytics/summary', { params }),
+            api.get('/customers/analytics/summary', { params: { days: params.days || 7 } }) // Customers currently only supports days lookback for new customers
+        ]);
+
+        return { ...salesRes.data, ...customersRes.data };
     },
 
     getTopProducts: async (rangeParam = 7, limit = 5) => {

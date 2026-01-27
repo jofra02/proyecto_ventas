@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const Login = () => {
+  const { t, language, setLanguage } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
@@ -20,16 +22,27 @@ const Login = () => {
         navigate('/');
       }
     } catch (err) {
-      alert("Invalid credentials");
+      alert(t("Invalid credentials"));
     }
   };
 
   return (
     <div className="login-page">
+      <div className="absolute top-8 right-8">
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="bg-white/10 text-white border border-white/20 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-primary transition-all cursor-pointer backdrop-blur-md"
+        >
+          <option value="en">English (EN)</option>
+          <option value="es">Español (ES)</option>
+        </select>
+      </div>
+
       <div className="login-card glass-card animate-fade-in">
         <div className="login-header">
-          <h2>Welcome Back</h2>
-          <p>Sign in to your ERP account</p>
+          <h2>{t("Welcome Back")}</h2>
+          <p>{t("Sign in to your ERP account")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
@@ -37,7 +50,7 @@ const Login = () => {
             <User size={18} />
             <input
               type="text"
-              placeholder="Username"
+              placeholder={t("Username")}
               required
               value={username}
               onChange={e => setUsername(e.target.value)}
@@ -47,13 +60,13 @@ const Login = () => {
             <Lock size={18} />
             <input
               type="password"
-              placeholder="Password"
+              placeholder={t("Password")}
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
             />
           </div>
-          <button type="submit" className="primary-btn login-btn">Sign In</button>
+          <button type="submit" className="primary-btn login-btn">{t("Sign In")}</button>
         </form>
       </div>
 

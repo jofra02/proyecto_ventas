@@ -15,6 +15,9 @@ class Product(Base):
     track_expiry = Column(Boolean, default=False)
     is_batch_tracked = Column(Boolean, default=False)
     min_stock_level = Column(Float, default=10.0) # Default low stock threshold
+    
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    supplier = relationship("Supplier", backref="products", lazy="selectin")
 
     barcodes = relationship("ProductBarcode", back_populates="product", lazy="selectin")
 

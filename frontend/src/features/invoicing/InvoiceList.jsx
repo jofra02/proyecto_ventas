@@ -6,8 +6,10 @@ import Drawer from '../../components/common/Drawer';
 import ThermalReceipt from '../../components/printing/ThermalReceipt';
 import DataLayout from '../../components/layout/DataLayout';
 import StatusBadge from '../../components/common/StatusBadge';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const InvoiceList = () => {
+    const { t } = useLanguage();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDoc, setSelectedDoc] = useState(null);
@@ -47,35 +49,35 @@ const InvoiceList = () => {
 
     return (
         <DataLayout
-            title="Invoices (Documentos)"
-            subtitle="View and managed issued tax documents"
+            title={t("Invoices (Documentos)")}
+            subtitle={t("View and managed issued tax documents")}
             icon={FileText}
         >
             <table className="custom-table">
                 <thead>
                     <tr>
-                        <th>Doc #</th>
-                        <th>Date</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th className="text-right">Actions</th>
+                        <th>{t('Doc #')}</th>
+                        <th>{t('Date')}</th>
+                        <th>{t('Total')}</th>
+                        <th>{t('Status')}</th>
+                        <th className="text-right">{t('Actions')}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {loading ? (
-                        <tr><td colSpan="5" className="text-center py-8 text-gray-400">Loading documents...</td></tr>
+                        <tr><td colSpan="5" className="text-center py-8 text-gray-400">{t('Loading documents...')}</td></tr>
                     ) : invoices.length === 0 ? (
-                        <tr><td colSpan="5" className="text-center py-8 text-gray-400">No documents issued.</td></tr>
+                        <tr><td colSpan="5" className="text-center py-8 text-gray-400">{t('No documents issued.')}</td></tr>
                     ) : invoices.map(doc => (
                         <tr key={doc.id}>
                             <td className="font-mono text-blue-600 font-bold">#{doc.id.toString().padStart(8, '0')}</td>
                             <td>{format(new Date(doc.created_at), 'dd/MM/yyyy HH:mm')}</td>
                             <td className="font-bold">${doc.total.toFixed(2)}</td>
                             <td>
-                                <StatusBadge type="success">{doc.status}</StatusBadge>
+                                <StatusBadge type="success">{t(doc.status)}</StatusBadge>
                             </td>
                             <td className="text-right">
-                                <button className="text-blue-600 hover:text-blue-800" onClick={() => viewDocument(doc.id)} title="View Receipt">
+                                <button className="text-blue-600 hover:text-blue-800" onClick={() => viewDocument(doc.id)} title={t("View Receipt")}>
                                     <Eye size={16} />
                                 </button>
                             </td>
@@ -85,7 +87,7 @@ const InvoiceList = () => {
             </table>
 
             {/* Document Drawer */}
-            <Drawer isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Document View" size="md">
+            <Drawer isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t("Document View")} size="md">
                 {selectedDoc && (
                     <div className="p-4 flex flex-col items-center">
                         <ThermalReceipt

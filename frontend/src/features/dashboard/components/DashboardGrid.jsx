@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import {
     DndContext,
     closestCenter,
@@ -6,7 +7,6 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
-    DragOverlay
 } from '@dnd-kit/core';
 import {
     arrayMove,
@@ -14,12 +14,13 @@ import {
     sortableKeyboardCoordinates,
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
+import { Save, RotateCcw } from 'lucide-react';
 import { WIDGETS, INITIAL_LAYOUT } from '../registry';
 import { SortableWidget } from './SortableWidget';
 import ErrorBoundary from '../../../components/common/ErrorBoundary';
-import { Save, RotateCcw } from 'lucide-react';
 
 const DashboardGrid = ({ dashboardData }) => {
+    const { t } = useLanguage();
     // We only need the ID to track order in dnd-kit list
     const [items, setItems] = useState(() => {
         return INITIAL_LAYOUT.map(l => l.i);
@@ -67,7 +68,7 @@ const DashboardGrid = ({ dashboardData }) => {
     };
 
     const resetLayout = () => {
-        if (confirm("Reset layout?")) {
+        if (confirm(t("Reset layout?"))) {
             setItems(INITIAL_LAYOUT.map(l => l.i));
             localStorage.removeItem('dashboard_items');
         }
@@ -108,15 +109,15 @@ const DashboardGrid = ({ dashboardData }) => {
                         onClick={() => setIsEditable(!isEditable)}
                         className={`text-sm px-3 py-1.5 rounded-md border font-medium transition-all ${isEditable ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-secondary border-border hover:border-gray-300'}`}
                     >
-                        {isEditable ? 'Done Editing' : 'Customize Layout'}
+                        {isEditable ? t('Done Editing') : t('Customize Layout')}
                     </button>
                     {isEditable && (
                         <>
                             <button onClick={saveLayout} className="text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-border text-sidebar-muted hover:text-success hover:border-success">
-                                <Save size={14} /> Save
+                                <Save size={14} /> {t('Save')}
                             </button>
                             <button onClick={resetLayout} className="text-sm flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-border text-sidebar-muted hover:text-danger hover:border-danger">
-                                <RotateCcw size={14} /> Reset
+                                <RotateCcw size={14} /> {t('Reset')}
                             </button>
                         </>
                     )}
@@ -133,9 +134,9 @@ const DashboardGrid = ({ dashboardData }) => {
                                 }
                             }}
                         >
-                            <option value="">+ Add Widget</option>
+                            <option value="">{t('+ Add Widget')}</option>
                             {Object.entries(WIDGETS).map(([key, config]) => (
-                                <option key={key} value={key}>{config.label}</option>
+                                <option key={key} value={key}>{t(config.label)}</option>
                             ))}
                         </select>
                     </div>
@@ -174,7 +175,7 @@ const DashboardGrid = ({ dashboardData }) => {
                                         id={id}
                                         component={config.component}
                                         componentProps={dashboardData}
-                                        label={config.label}
+                                        label={t(config.label)}
                                         onRemove={() => removeWidget(id)}
                                         isEditable={isEditable}
                                         className={`${colSpan} h-full`}

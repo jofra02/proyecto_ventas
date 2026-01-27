@@ -5,7 +5,10 @@ import ProductDrawer from './ProductDrawer';
 import DataLayout from '../../components/layout/DataLayout';
 import StatusBadge from '../../components/common/StatusBadge';
 
+import { useLanguage } from '../../i18n/LanguageContext';
+
 const ProductList = () => {
+  const { t } = useLanguage();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,12 +37,12 @@ const ProductList = () => {
   return (
     <>
       <DataLayout
-        title="Product Catalog"
-        subtitle="Manage items, pricing and barcodes"
+        title={t('Product Catalog')}
+        subtitle={t('Manage items, pricing and barcodes')}
         icon={Package}
         actions={
           <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
-            <Plus size={18} /> Add Product
+            <Plus size={18} /> {t('Add Product')}
           </button>
         }
         filters={
@@ -47,7 +50,7 @@ const ProductList = () => {
             <Search size={18} className="text-gray-400" />
             <input
               type="text"
-              placeholder="Search by SKU or name..."
+              placeholder={t('Search by SKU or name...')}
               className="bg-transparent border-none outline-none w-full text-sm"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -58,19 +61,19 @@ const ProductList = () => {
         <table className="custom-table">
           <thead>
             <tr>
-              <th>Product Name</th>
-              <th>SKU</th>
-              <th>Price</th>
-              <th>Barcodes</th>
-              <th>Inventory Controls</th>
-              <th>Status</th>
+              <th>{t('Product Name')}</th>
+              <th>{t('SKU')}</th>
+              <th>{t('Price')}</th>
+              <th>{t('Barcodes')}</th>
+              <th>{t('Inventory Controls')}</th>
+              <th>{t('Status')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" className="text-center py-8 text-gray-400">Loading catalog...</td></tr>
+              <tr><td colSpan="6" className="text-center py-8 text-gray-400">{t('Loading catalog...')}</td></tr>
             ) : filteredProducts.length === 0 ? (
-              <tr><td colSpan="6" className="text-center py-8 text-gray-400">No products found.</td></tr>
+              <tr><td colSpan="6" className="text-center py-8 text-gray-400">{t('No products found.')}</td></tr>
             ) : filteredProducts.map(p => (
               <tr key={p.id}>
                 <td className="font-semibold text-gray-900">{p.name}</td>
@@ -84,13 +87,13 @@ const ProductList = () => {
                 </td>
                 <td>
                   <div className="flex gap-2">
-                    {p.track_expiry && <StatusBadge type="warning">Expiry</StatusBadge>}
-                    {p.is_batch_tracked && <StatusBadge type="info">Batch</StatusBadge>}
+                    {p.track_expiry && <StatusBadge type="warning">{t('Expiry')}</StatusBadge>}
+                    {p.is_batch_tracked && <StatusBadge type="info">{t('Batch')}</StatusBadge>}
                     {!p.track_expiry && !p.is_batch_tracked && <span className="text-gray-400 text-xs">-</span>}
                   </div>
                 </td>
                 <td>
-                  <StatusBadge type="success">Active</StatusBadge>
+                  <StatusBadge type="success">{t('Active')}</StatusBadge>
                 </td>
               </tr>
             ))}

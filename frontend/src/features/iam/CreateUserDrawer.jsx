@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import Drawer from '../../components/common/Drawer';
+import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import Drawer from '../../components/common/Drawer';
+import { useLanguage } from '../../i18n/LanguageContext';
 import PermissionSelector from './PermissionSelector';
 
 const CreateUserDrawer = ({ isOpen, onClose, onSuccess }) => {
+    const { t } = useLanguage();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -22,18 +24,18 @@ const CreateUserDrawer = ({ isOpen, onClose, onSuccess }) => {
             setPermissions([]);
         } catch (err) {
             console.error(err);
-            alert("Failed to create user. Username might exist.");
+            alert(t("Failed to create user. Username might exist."));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Drawer isOpen={isOpen} onClose={onClose} title="Create New Staff User">
+        <Drawer isOpen={isOpen} onClose={onClose} title={t("Create New Staff User")}>
             <form onSubmit={handleSubmit} className="erp-form h-full flex flex-col">
                 <div className="flex-1">
                     <div className="input-group">
-                        <label>Username</label>
+                        <label>{t('Username')}</label>
                         <input
                             type="text"
                             value={formData.username}
@@ -44,7 +46,7 @@ const CreateUserDrawer = ({ isOpen, onClose, onSuccess }) => {
                     </div>
 
                     <div className="input-group">
-                        <label>Password</label>
+                        <label>{t('Password')}</label>
                         <input
                             type="password"
                             value={formData.password}
@@ -55,14 +57,14 @@ const CreateUserDrawer = ({ isOpen, onClose, onSuccess }) => {
                     </div>
 
                     <div className="input-group">
-                        <label>Role</label>
+                        <label>{t('Role')}</label>
                         <select
                             value={formData.role}
                             onChange={e => setFormData({ ...formData, role: e.target.value })}
                         >
-                            <option value="EMPLOYEE">Employee (POS Access)</option>
-                            <option value="SUPERVISOR">Supervisor (Manage Stock)</option>
-                            <option value="ADMIN">Admin (Full Access)</option>
+                            <option value="EMPLOYEE">{t('Employee (POS Access)')}</option>
+                            <option value="SUPERVISOR">{t('Supervisor (Manage Stock)')}</option>
+                            <option value="ADMIN">{t('Admin (Full Access)')}</option>
                         </select>
                     </div>
 
@@ -75,7 +77,7 @@ const CreateUserDrawer = ({ isOpen, onClose, onSuccess }) => {
 
                 <div className="pt-4 mt-auto border-t border-gray-100">
                     <button type="submit" className="primary-btn w-full justify-center" disabled={loading}>
-                        {loading ? 'Creating...' : 'Create User'}
+                        {loading ? t('Creating...') : t('Create User')}
                     </button>
                 </div>
             </form>

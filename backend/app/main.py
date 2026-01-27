@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     from modules.customers.api.v1 import router as customers_router
     from modules.payments.api.v1 import router as payments_router
     from modules.admin.api.v1 import router as admin_router
+    from modules.suppliers.api.v1 import router as suppliers_router
 
     app.include_router(iam_router.router, prefix=settings.API_V1_STR)
     app.include_router(catalog_router.router, prefix=settings.API_V1_STR)
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(customers_router.router, prefix=settings.API_V1_STR)
     app.include_router(payments_router.router, prefix=settings.API_V1_STR)
     app.include_router(admin_router.router, prefix=settings.API_V1_STR)
+    app.include_router(suppliers_router.router, prefix=settings.API_V1_STR)
     
     from modules.catalog import manifest as catalog_manifest
     from modules.inventory import manifest as inventory_manifest
@@ -46,6 +48,7 @@ def create_app() -> FastAPI:
     from modules.accounts_receivable import manifest as ar_manifest
     from modules.picking import manifest as picking_manifest
     from modules.iam import manifest as iam_manifest
+    from modules.suppliers import manifest as suppliers_manifest
     
     registry.register_module(catalog_manifest.module)
     registry.register_module(inventory_manifest.module)
@@ -56,6 +59,7 @@ def create_app() -> FastAPI:
     registry.register_module(ar_manifest.module)
     registry.register_module(picking_manifest.module)
     registry.register_module(iam_manifest.module)
+    registry.register_module(suppliers_manifest.module)
     
     # 2. Include Routers
     registry.include_routers(app, prefix=settings.API_V1_STR)

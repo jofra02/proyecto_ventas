@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { dashboardService } from '../services/dashboardService';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const SalesTrendWidget = ({ globalTimeRange = 7 }) => {
+    const { t } = useLanguage();
     const [data, setData] = useState([]);
     const [localPeriod, setLocalPeriod] = useState('global'); // 'global' or number
     const [loading, setLoading] = useState(true);
@@ -11,8 +13,8 @@ const SalesTrendWidget = ({ globalTimeRange = 7 }) => {
 
     // Helper to format the global label
     const getGlobalLabel = () => {
-        if (typeof globalTimeRange === 'number') return `${globalTimeRange} days`;
-        return "Custom Range";
+        if (typeof globalTimeRange === 'number') return `${globalTimeRange} ${t('days')}`;
+        return t("Custom Range");
     };
 
     useEffect(() => {
@@ -33,16 +35,16 @@ const SalesTrendWidget = ({ globalTimeRange = 7 }) => {
     return (
         <div className="bg-white rounded-xl p-6 border border-border shadow-sm h-full flex flex-col">
             <div className="flex justify-between items-center mb-6 shrink-0">
-                <h3 className="text-lg font-bold text-primary">Sales Trend</h3>
+                <h3 className="text-lg font-bold text-primary">{t('Sales Trend')}</h3>
                 <select
                     value={typeof localPeriod === 'object' ? 'custom' : localPeriod}
                     onChange={(e) => setLocalPeriod(e.target.value === 'global' ? 'global' : Number(e.target.value))}
                     className="bg-body border border-border rounded-md px-3 py-1 text-sm outline-none focus:border-primary transition-colors cursor-pointer"
                 >
-                    <option value="global">Global ({getGlobalLabel()})</option>
-                    <option value={7}>Last 7 Days</option>
-                    <option value={30}>Last 30 Days</option>
-                    <option value={90}>Last 90 Days</option>
+                    <option value="global">{t('Global')} ({getGlobalLabel()})</option>
+                    <option value={7}>{t('Last 7 Days')}</option>
+                    <option value={30}>{t('Last 30 Days')}</option>
+                    <option value={90}>{t('Last 90 Days')}</option>
                 </select>
             </div>
 
@@ -79,7 +81,7 @@ const SalesTrendWidget = ({ globalTimeRange = 7 }) => {
                             />
                             <Tooltip
                                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                formatter={(value) => [`$${value.toFixed(2)}`, 'Revenue']}
+                                formatter={(value) => [`$${value.toFixed(2)}`, t('Revenue')]}
                             />
                             <Area
                                 type="monotone"

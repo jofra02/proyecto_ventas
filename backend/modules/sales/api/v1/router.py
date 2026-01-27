@@ -126,36 +126,58 @@ async def get_sales_summary(
         cutoff_end = datetime.utcnow()
         cutoff_start = cutoff_end - timedelta(days=lookback)
 
-    # Revenue (Sum of qty * price from SaleItems of CONFIRMED sales)
-    revenue_stmt = (
-        select(func.sum(SaleItem.qty * SaleItem.price))
-        .join(Sale)
-        .where(
-            Sale.status == SaleStatus.CONFIRMED.value,
-            Sale.created_at >= cutoff_start,
-            Sale.created_at <= cutoff_end
+    # --- Helper Inner Function ---
+    async def get_period_stats(start, end):
+        # Revenue
+        revenue_stmt = (
+            select(func.sum(SaleItem.qty * SaleItem.price))
+            .join(Sale)
+            .where(
+                Sale.status == SaleStatus.CONFIRMED.value,
+                Sale.created_at >= start,
+                Sale.created_at <= end
+            )
         )
-    )
-    total_revenue = (await db.execute(revenue_stmt)).scalar() or 0.0
+        period_revenue = (await db.execute(revenue_stmt)).scalar() or 0.0
 
-    # Total Orders (Count of purchases)
-    count_stmt = (
-        select(func.count(Sale.id))
-        .where(
-            Sale.status == SaleStatus.CONFIRMED.value,
-            Sale.created_at >= cutoff_start,
-            Sale.created_at <= cutoff_end
+        # Orders
+        count_stmt = (
+            select(func.count(Sale.id))
+            .where(
+                Sale.status == SaleStatus.CONFIRMED.value,
+                Sale.created_at >= start,
+                Sale.created_at <= end
+            )
         )
-    )
-    total_orders = (await db.execute(count_stmt)).scalar() or 0
+        period_orders = (await db.execute(count_stmt)).scalar() or 0
+        
+        return period_revenue, period_orders
 
-    # Avg Order Value
-    avg_order_value = total_revenue / total_orders if total_orders > 0 else 0.0
+    # 1. Current Period
+    current_revenue, current_orders = await get_period_stats(cutoff_start, cutoff_end)
+    current_avg_order = current_revenue / current_orders if current_orders > 0 else 0.0
+
+    # 2. Previous Period (Same duration before cutoff_start)
+    duration = cutoff_end - cutoff_start
+    prev_end = cutoff_start
+    prev_start = prev_end - duration
+    
+    prev_revenue, prev_orders = await get_period_stats(prev_start, prev_end)
+    prev_avg_order = prev_revenue / prev_orders if prev_orders > 0 else 0.0
+
+    # 3. Calculate Trends (Percentage Change)
+    def calc_trend(current, previous):
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return ((current - previous) / previous) * 100.0
 
     return {
-        "total_revenue": total_revenue,
-        "total_orders": total_orders,
-        "avg_order_value": avg_order_value,
+        "total_revenue": current_revenue,
+        "total_orders": current_orders,
+        "avg_order_value": current_avg_order,
+        "revenue_trend": calc_trend(current_revenue, prev_revenue),
+        "orders_trend": calc_trend(current_orders, prev_orders),
+        "avg_order_trend": calc_trend(current_avg_order, prev_avg_order)
     }
 
 from modules.sales.application.analytics_service import SalesAnalyticsService

@@ -35,6 +35,7 @@ class StockMovement(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False, index=True)
     batch_id = Column(Integer, ForeignKey("batches.id"), nullable=True) # Optional if not batch tracked
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True) # Source of stock (for IN movements)
     
     qty = Column(Float, nullable=False)
     type = Column(String, nullable=False) # Store Enum as string for simplicity with SQLite/Postgres compat

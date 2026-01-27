@@ -14,6 +14,7 @@ class ProductCreate(BaseModel):
     price: float = 0.0
     track_expiry: bool = False
     is_batch_tracked: bool = False
+    min_stock_level: float | None = 10.0
 
 class BarcodeRead(BaseModel):
     barcode: str

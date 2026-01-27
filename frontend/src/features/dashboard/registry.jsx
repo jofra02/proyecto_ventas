@@ -1,4 +1,4 @@
-import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import StatCard from './components/StatCard';
 import SalesTrendWidget from './widgets/SalesTrendWidget';
 import TopProductsWidget from './widgets/TopProductsWidget';
@@ -10,6 +10,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currenc
 
 // Wrapper for StatCards to adapt them to the grid system context
 const StatWrapper = ({ title, value, icon, color, trend, stats, loading, dataKey, format }) => {
+    const { t } = useLanguage();
     let displayValue = value;
     if (stats && dataKey && stats[dataKey] !== undefined) {
         displayValue = format ? format(stats[dataKey]) : stats[dataKey];
@@ -18,7 +19,7 @@ const StatWrapper = ({ title, value, icon, color, trend, stats, loading, dataKey
     return (
         <div className="h-full">
             <StatCard
-                title={title}
+                title={t(title)}
                 value={displayValue}
                 icon={icon}
                 color={color}
@@ -32,7 +33,7 @@ const StatWrapper = ({ title, value, icon, color, trend, stats, loading, dataKey
 export const WIDGETS = {
     'revenue': {
         id: 'revenue',
-        component: (props) => <StatWrapper {...props} title="Total Revenue" icon={DollarSign} color="#10b981" trend={0} dataKey="total_revenue" format={formatCurrency} />,
+        component: (props) => <StatWrapper {...props} title="Total Revenue" icon={DollarSign} color="#10b981" trend={props.stats?.revenue_trend || 0} dataKey="total_revenue" format={formatCurrency} />,
         label: 'Total Revenue',
         defaultW: 1,
         defaultH: 4,
@@ -41,7 +42,7 @@ export const WIDGETS = {
     },
     'orders': {
         id: 'orders',
-        component: (props) => <StatWrapper {...props} title="Total Orders" icon={ShoppingBag} color="#3b82f6" trend={0} dataKey="total_orders" />,
+        component: (props) => <StatWrapper {...props} title="Total Orders" icon={ShoppingBag} color="#3b82f6" trend={props.stats?.orders_trend || 0} dataKey="total_orders" />,
         label: 'Total Orders',
         defaultW: 1,
         defaultH: 4,
@@ -50,7 +51,7 @@ export const WIDGETS = {
     },
     'customers': {
         id: 'customers',
-        component: (props) => <StatWrapper {...props} title="New Customers" icon={Users} color="#8b5cf6" trend={0} value="--" />, // API doesn't have customers yet
+        component: (props) => <StatWrapper {...props} title="New Customers" icon={Users} color="#8b5cf6" trend={props.stats?.new_customers_trend || 0} dataKey="new_customers" />,
         label: 'New Customers',
         defaultW: 1,
         defaultH: 4,
@@ -59,7 +60,7 @@ export const WIDGETS = {
     },
     'avg_order': {
         id: 'avg_order',
-        component: (props) => <StatWrapper {...props} title="Avg. Order Value" icon={TrendingUp} color="#f59e0b" trend={0} dataKey="avg_order_value" format={formatCurrency} />,
+        component: (props) => <StatWrapper {...props} title="Avg. Order Value" icon={TrendingUp} color="#f59e0b" trend={props.stats?.avg_order_trend || 0} dataKey="avg_order_value" format={formatCurrency} />,
         label: 'Avg. Order Value',
         defaultW: 1,
         defaultH: 4,

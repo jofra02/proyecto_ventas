@@ -3,8 +3,7 @@ from .api.v1.router import router
 from .domain import models
 
 module = Module(
-    name="catalog",
-    display_name="Products",
+    name="suppliers",
     router=router,
-    models=[models.Product]
+    models=[models.Supplier]
 )
