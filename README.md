@@ -1,9 +1,79 @@
 # Enterprise ERP
 
-A modern, full-stack ERP solution built with **FastAPI** (Python) and **React** (Vite).
+A modern, full-stack ERP solution built with **FastAPI** (Python) and **React** (Vite).  
 Features a modular monolith architecture designed for scalability and maintainability.
 
-## Modules
+---
+
+## 🚀 Quick Start (Production / Docker)
+
+The easiest way to run the full stack (Frontend + Backend + Database) is using Docker Compose.
+
+### Prerequisites
+- Docker & Docker Compose installed.
+
+### Steps
+1. **Clone the repository.**
+2. **Start the stack:**
+   ```bash
+   docker-compose up -d
+   ```
+   This will spin up:
+   - **Frontend**: `http://localhost:80` (Served via Nginx)
+   - **Backend**: Internal communication via `erp_net`
+   - **Database**: Postgres 15 (volume persisted)
+
+3. **Access the App:**  
+   Open [http://localhost](http://localhost) in your browser.
+
+---
+
+## 🛠️ Local Development
+
+If you want to run the services individually for development.
+
+### 1. Database & Environment
+- **Security First**: This project enforces Strict Environment Separation.
+- **Backend Secrets**: Copy `backend/.env.example` to `backend/.env`.
+  ```bash
+  cp backend/.env.example backend/.env
+  ```
+  *(By default, it uses SQLite for local dev if no DB credentials are set)*
+
+- **Frontend Config**: Copy `frontend/.env.example` to `frontend/.env`.
+  ```bash
+  cp frontend/.env.example frontend/.env
+  ```
+
+### 2. Backend (FastAPI)
+Using `uv` (recommended) or standard `pip`.
+
+```bash
+cd backend
+
+# Option A: Using uv (Fastest)
+uv sync
+uv run uvicorn app.main:app --reload
+
+# Option B: Standard pip
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+*API docs available at: http://localhost:8000/docs*
+
+### 3. Frontend (React + Vite)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*App available at: http://localhost:5173* (Note: Ensure `frontend/.env` points to `http://localhost:8000/api/v1`)
+
+---
+
+## 📦 Modules
 - **IAM**: User management, Roles (RBAC), Authentication.
 - **Catalog**: Product management, Categories, Pricing.
 - **Inventory**: Stock tracking, Movements, Adjustments.
@@ -11,70 +81,16 @@ Features a modular monolith architecture designed for scalability and maintainab
 - **Customers**: CRM, Account Balance.
 - **Payments**: Payment methods, Transaction recording.
 - **Admin**: System configuration, Regional settings.
+- **Finance**: Cost management, Treasury, Expenses.
 
-## Getting Started
+## 🏗️ Architecture
+- **Modular Monolith**: Each module (`modules/xyz`) contains its own `domain`, `application`, and `api` layers.
+- **Feature-Sliced Frontend**: Organized by `features/xyz` for scalability.
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
+## 🔐 Default Credentials
+*Admin user created automatically on first run:*
+- **User**: `admin`
+- **Pass**: `admin123`
 
-### Backend Setup
-
-1. Navigate to `backend/`:
-   ```bash
-   cd backend
-   ```
-2. Create virtual environment:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Linux/Mac
-   # .venv\Scripts\activate   # Windows
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Configure Environment:
-   ```bash
-   cp .env.example .env
-   # Edit .env if needed
-   ```
-5. Run the server:
-   ```bash
-   # Run with auto-reload
-   uvicorn app.main:app --reload
-   ```
-   *API docs available at: http://localhost:8000/docs*
-
-### Frontend Setup
-
-1. Navigate to `frontend/`:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Configure Environment:
-   ```bash
-   cp .env.example .env
-   ```
-4. Run development server:
-   ```bash
-   npm run dev
-   ```
-   *App available at: http://localhost:5173*
-
-## Login Credentials
-*Default admin user created on first run (check `create_admin.py` if needed)*
-- **Username**: admin
-- **Password**: admin123
-
-## Architecture
-This project follows a **Modular Monolith** pattern.
-- **Backend**: Each module (`modules/xyz`) has its own `domain` (models), `application` (logic), and `api` (routes).
-- **Frontend**: Feature-sliced design (`features/xyz`) containing `components`, `views`, and `services`.
-
-## License
+## 📄 License
 MIT

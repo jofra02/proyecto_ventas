@@ -1,0 +1,56 @@
+services:
+  # Database Service (Postgres)
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - erp_net
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=securepassword
+      - POSTGRES_DB=erp_prod
+
+  # Backend API
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - db
+    networks:
+      - erp_net
+    environment:
+      # Database Configuration (Using our new flexible config)
+      - DB_TYPE=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=securepassword
+      - DB_NAME=erp_prod
+      # App Security
+      - SECRET_KEY=changethisinproduction
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - BACKEND_CORS_ORIGINS=["http://localhost", "http://localhost:80"]
+
+  # Frontend (Nginx)
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - erp_net
+
+volumes:
+  postgres_data:
+
+networks:
+  erp_net:
+    driver: bridge
