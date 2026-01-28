@@ -14,7 +14,7 @@ def create_app() -> FastAPI:
     
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://localhost:3000"],
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -25,7 +25,6 @@ def create_app() -> FastAPI:
     from modules.catalog.api.v1 import router as catalog_router
     from modules.inventory.api.v1 import router as inventory_router
     from modules.sales.api.v1 import router as sales_router
-    from modules.customers.api.v1 import router as customers_router
     from modules.customers.api.v1 import router as customers_router
     from modules.admin.api.v1 import router as admin_router
     from modules.suppliers.api.v1 import router as suppliers_router
@@ -43,7 +42,6 @@ def create_app() -> FastAPI:
     from modules.inventory import manifest as inventory_manifest
     from modules.sales import manifest as sales_manifest
     from modules.invoicing import manifest as invoicing_manifest
-    from modules.customers import manifest as customers_manifest
     from modules.customers import manifest as customers_manifest
     from modules.accounts_receivable import manifest as ar_manifest
     from modules.picking import manifest as picking_manifest

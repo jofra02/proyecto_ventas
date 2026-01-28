@@ -6,7 +6,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useNotification } from '../../context/NotificationContext';
 
 const Login = () => {
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language, changeLanguage } = useLanguage();
   const { showNotification } = useNotification();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -33,11 +33,11 @@ const Login = () => {
       <div className="absolute top-8 right-8">
         <select
           value={language}
-          onChange={(e) => setLanguage(e.target.value)}
+          onChange={(e) => changeLanguage(e.target.value)}
           className="bg-white/10 text-white border border-white/20 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-primary transition-all cursor-pointer backdrop-blur-md"
         >
-          <option value="en">English (EN)</option>
-          <option value="es">Español (ES)</option>
+          <option value="en" className="bg-slate-800 text-white">English (EN)</option>
+          <option value="es" className="bg-slate-800 text-white">Español (ES)</option>
         </select>
       </div>
 
@@ -47,7 +47,7 @@ const Login = () => {
           <p>{t("Sign in to your ERP account")}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form dark-input-group">
           <div className="input-field">
             <User size={18} />
             <input
@@ -92,6 +92,7 @@ const Login = () => {
         .login-header h2 {
           font-size: 2rem;
           margin-bottom: 0.5rem;
+          color: white; /* Explicitly set to white */
         }
 
         .login-header p {
@@ -103,26 +104,6 @@ const Login = () => {
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
-        }
-
-        .input-field {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid var(--border);
-          padding: 1rem;
-          border-radius: var(--radius-md);
-          color: var(--text-muted);
-        }
-
-        .input-field input {
-          background: transparent;
-          border: none;
-          color: white;
-          outline: none;
-          width: 100%;
-          font-size: 1rem;
         }
 
         .login-btn {

@@ -15,7 +15,7 @@ const PaymentList = () => {
         const fetchData = async () => {
             try {
                 const [payRes, custRes] = await Promise.all([
-                    api.get('/payments/'),
+                    api.get('/finance/payments/'),
                     api.get('/customers/')
                 ]);
 
