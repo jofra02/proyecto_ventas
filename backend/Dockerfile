@@ -28,6 +28,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application code
 COPY . .
+RUN chmod +x entrypoint.sh && \
+    sed -i 's/\r$//' entrypoint.sh
 
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
@@ -38,5 +40,6 @@ USER appuser
 # Expose port (default FastAPI/Uvicorn)
 EXPOSE 8000
 
-# Run the application
+# Run the application using the entrypoint script
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
