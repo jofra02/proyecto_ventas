@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Minus, Plus, Trash2, LayoutGrid, List } from 'lucide-react';
+import { Minus, Plus, Trash2, LayoutGrid, List, Package, Calculator, Box } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 import POSLayout from './POSLayout';
 import CheckoutDrawer from './CheckoutDrawer';
-import ThermalReceipt from '../../components/printing/ThermalReceipt';
+import { usePrinter } from '../../context/PrintContext';
+import { formatPackStock } from '../../utils/format';
 import '../../assets/print.css';
 
 const POS = () => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
+    const { print } = usePrinter();
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [stockMap, setStockMap] = useState({}); // { productId: qty }
@@ -19,6 +23,10 @@ const POS = () => {
     const [lastSale, setLastSale] = useState(null);
     const [storeSettings, setStoreSettings] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [selectedFractionalProduct, setSelectedFractionalProduct] = useState(null);
+    const [selectedPackProduct, setSelectedPackProduct] = useState(null);
+    const [weightInput, setWeightInput] = useState('0');
+    const [packUnitsInput, setPackUnitsInput] = useState('1');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -48,6 +56,13 @@ const POS = () => {
                 setProducts(prodRes.data);
             } catch (error) {
                 console.error("Failed to load POS data", error);
+                showNotification("Failed to load POS data", {
+                    type: "error",
+                    action: {
+                        label: t("Retry"),
+                        onClick: fetchData
+                    }
+                });
             } finally {
                 setLoading(false);
             }
@@ -60,8 +75,20 @@ const POS = () => {
         const existingItem = cart.find(item => item.id === product.id);
         const currentQty = existingItem ? existingItem.qty : 0;
 
+        if (product.product_type === 'fractional') {
+            setSelectedFractionalProduct(product);
+            setWeightInput('0');
+            return;
+        }
+
+        if (product.product_type === 'pack') {
+            setSelectedPackProduct(product);
+            setPackUnitsInput('1');
+            return;
+        }
+
         if (currentQty + 1 > currentStock) {
-            alert(t('Only {stock} units available!').replace('{stock}', currentStock));
+            showNotification(t('Only {stock} {uom} available!').replace('{stock}', currentStock).replace('{uom}', t(product.unit_of_measure || 'unit')), 'warning');
             return;
         }
 
@@ -76,17 +103,100 @@ const POS = () => {
         });
     };
 
+    const confirmFractionalAdd = () => {
+        if (!selectedFractionalProduct) return;
+        const qty = parseFloat(weightInput);
+        if (isNaN(qty) || qty <= 0) {
+            showNotification(t("Please enter a valid weight/volume"), "warning");
+            return;
+        }
+
+        const currentStock = stockMap[selectedFractionalProduct.id] || 0;
+        const existingItem = cart.find(item => item.id === selectedFractionalProduct.id);
+        const currentQty = existingItem ? existingItem.qty : 0;
+
+        if (currentQty + qty > currentStock) {
+            showNotification(t('Only {stock} {uom} available!').replace('{stock}', currentStock).replace('{uom}', t(selectedFractionalProduct.unit_of_measure || 'unit')), 'warning');
+            return;
+        }
+
+        setCart(prev => {
+            const existing = prev.find(item => item.id === selectedFractionalProduct.id);
+            if (existing) {
+                return prev.map(item =>
+                    item.id === selectedFractionalProduct.id ? { ...item, qty: item.qty + qty } : item
+                );
+            }
+            return [...prev, { ...selectedFractionalProduct, qty: qty }];
+        });
+        setSelectedFractionalProduct(null);
+    };
+
+    const confirmPackAdd = (mode) => {
+        if (!selectedPackProduct) return;
+
+        // mode: 'pack' or 'unit'
+        // If the user has 3 packs, stock = 3. 
+        // Selling 1 pack = adding 1.0. 
+        // Selling 1 unit = adding (1 / mv).
+        const mv = parseFloat(selectedPackProduct.measurement_value) || 1;
+        let qtyToAdd = 0;
+
+        if (mode === 'pack') {
+            qtyToAdd = 1;
+        } else {
+            const units = parseInt(packUnitsInput);
+            if (isNaN(units) || units <= 0) {
+                showNotification(t("Please enter a valid quantity"), "warning");
+                return;
+            }
+            qtyToAdd = units / mv;
+        }
+
+        const currentStock = parseFloat(stockMap[selectedPackProduct.id]) || 0;
+        const existingItem = cart.find(item => item.id === selectedPackProduct.id);
+        const currentQty = existingItem ? parseFloat(existingItem.qty) : 0;
+
+        // Use a small epsilon for float comparison
+        if (currentQty + qtyToAdd > currentStock + 0.0001) {
+            showNotification(t('Only {stock} available!').replace('{stock}', currentStock), 'warning');
+            return;
+        }
+
+        setCart(prev => {
+            const existing = prev.find(item => item.id === selectedPackProduct.id);
+            if (existing) {
+                return prev.map(item =>
+                    item.id === selectedPackProduct.id ? { ...item, qty: item.qty + qtyToAdd } : item
+                );
+            }
+            return [...prev, { ...selectedPackProduct, qty: qtyToAdd }];
+        });
+        setSelectedPackProduct(null);
+    };
+
     const updateQty = (id, delta) => {
         setCart(prev => prev.map(item => {
             if (item.id === id) {
-                const newQty = item.qty + delta;
-                if (newQty < 1) return item;
+                let actualDelta = delta;
+                if (item.product_type === 'pack' && item.measurement_value) {
+                    const mv = parseFloat(item.measurement_value) || 1;
+                    // If delta is 1 (unitary increment), for a pack it means 1 bottle = 1/mv packs
+                    if (Math.abs(delta) === 1) {
+                        actualDelta = delta > 0 ? (1 / mv) : (-1 / mv);
+                    }
+                }
+
+                // Use rounding to avoid floating point errors
+                let newQty = Math.round((item.qty + actualDelta) * 1000000) / 1000000;
+
+                if (newQty < 0.001) return item; // Don't allow 0 or negative via buttons
 
                 // Check stock limit if increasing
                 if (delta > 0) {
                     const currentStock = stockMap[item.id] || 0;
                     if (newQty > currentStock) {
-                        alert(t('Cannot add more. Stock limit: {stock}').replace('{stock}', currentStock));
+                        showNotification(t('Cannot add more. Stock limit: {stock} {uom}').replace('{stock}', currentStock).replace('{uom}', t(item.unit_of_measure || 'unit')), 'warning');
                         return item;
                     }
                 }
@@ -130,7 +240,12 @@ const POS = () => {
 
     const handlePrint = () => {
         if (lastSale) {
-            window.print();
+            print({
+                sale: lastSale,
+                customer: lastSale.customer,
+                items: lastSale.items,
+                storeInfo: storeSettings
+            });
         }
     };
 
@@ -175,16 +290,38 @@ const POS = () => {
                                         className={`product-card ${isOOS ? 'oos' : ''}`}
                                         onClick={() => !isOOS && addToCart(p)}
                                     >
-                                        <div className="p-image-placeholder">
-                                            {p.name.substring(0, 2).toUpperCase()}
+                                        <div className="p-image-placeholder text-center flex-col">
+                                            <span className="text-2xl">{p.name.substring(0, 2).toUpperCase()}</span>
+                                            <span className="text-[10px] text-gray-400 font-mono mt-1 opacity-50">{p.sku}</span>
                                             {isOOS && <div className="oos-overlay">{t('OUT OF STOCK')}</div>}
                                         </div>
                                         <div className="p-info">
-                                            <h4>{p.name}</h4>
+                                            <h4 className="truncate flex items-center gap-1" title={p.name}>
+                                                {p.product_type === 'fractional' && <Calculator size={12} className="text-blue-500" />}
+                                                {p.product_type === 'pack' && <Box size={12} className="text-orange-500" />}
+                                                {p.name}
+                                                {p.measurement_value && (
+                                                    <span className="text-[8px] bg-blue-50 text-blue-600 px-1 rounded border border-blue-100 font-bold shrink-0">
+                                                        {p.measurement_value}{p.measurement_unit}
+                                                    </span>
+                                                )}
+                                            </h4>
                                             <div className="p-meta">
-                                                <span className="p-price">${p.price.toFixed(2)}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="p-price">${p.price.toFixed(2)}</span>
+                                                    <span className="text-[9px] text-gray-400 -mt-1 uppercase tracking-tighter">/ {t(p.unit_of_measure || 'unit')}</span>
+                                                </div>
                                                 <span className={`p-stock ${stock < 5 ? 'low-stock' : ''}`}>
-                                                    {stock} {t('left')}
+                                                    {p.product_type === 'pack' ? (
+                                                        formatPackStock(stock, p.measurement_value)
+                                                    ) : (
+                                                        `${stock} ${t(p.unit_of_measure || 'unit')}`
+                                                    )}
+                                                    {p.product_type === 'pack' && p.measurement_value && (
+                                                        <span className="block text-[8px] opacity-75">
+                                                            ({Math.round(stock * p.measurement_value)} {t('units')})
+                                                        </span>
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>
@@ -212,15 +349,38 @@ const POS = () => {
                                                 <td className="p-name-cell">
                                                     <div className="p-avatar">{p.name.substring(0, 1).toUpperCase()}</div>
                                                     <div>
-                                                        <div className="font-bold">{p.name}</div>
+                                                        <div className="font-bold flex items-center gap-1">
+                                                            {p.product_type === 'fractional' && <Calculator size={12} className="text-blue-500" />}
+                                                            {p.product_type === 'pack' && <Box size={12} className="text-orange-500" />}
+                                                            {p.name}
+                                                            {p.measurement_value && (
+                                                                <span className="text-[8px] bg-blue-50 text-blue-600 px-1 rounded border border-blue-100 font-bold">
+                                                                    {p.measurement_value}{p.measurement_unit}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <div className="text-xs text-gray-500">{p.sku}</div>
                                                     </div>
                                                 </td>
-                                                <td className="text-right font-mono font-bold">${p.price.toFixed(2)}</td>
+                                                <td className="text-right">
+                                                    <div className="font-mono font-bold">${p.price.toFixed(2)}</div>
+                                                    <div className="text-[10px] text-gray-400 uppercase tracking-tighter">/ {t(p.unit_of_measure || 'unit')}</div>
+                                                </td>
                                                 <td className="text-center">
-                                                    <span className={`stock-indicator ${stock < 5 ? 'low' : ''}`}>
-                                                        {stock}
-                                                    </span>
+                                                    <div className="flex flex-col items-center">
+                                                        <span className={`stock-indicator ${stock < 5 ? 'low' : ''}`}>
+                                                            {p.product_type === 'pack' ? (
+                                                                formatPackStock(stock, p.measurement_value)
+                                                            ) : (
+                                                                `${stock} ${t(p.unit_of_measure || 'unit')}`
+                                                            )}
+                                                        </span>
+                                                        {p.product_type === 'pack' && p.measurement_value && (
+                                                            <span className="text-[9px] text-gray-400 mt-0.5">
+                                                                ({Math.round(stock * p.measurement_value)} {t('units')})
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="text-right">
                                                     <button
@@ -247,18 +407,62 @@ const POS = () => {
                         <button className="clear-btn" onClick={() => setCart([])}>{t('Clear All')}</button>
                     </div>
 
-                    <div className="cart-items">
+                    <div className="cart-items custom-scrollbar">
                         {cart.length === 0 && <div className="empty-msg">{t('Cart is empty')}</div>}
                         {cart.map(item => (
                             <div key={item.id} className="cart-item">
                                 <div className="item-name">
-                                    <span>{item.name}</span>
-                                    <small>${item.price.toFixed(2)}</small>
+                                    <span className="flex items-center gap-1">
+                                        {item.product_type === 'fractional' && <Calculator size={12} className="text-blue-500" />}
+                                        {item.product_type === 'pack' && <Box size={12} className="text-orange-500" />}
+                                        {item.name}
+                                        {item.product_type === 'pack' && item.measurement_value && (
+                                            <span className="text-[10px] ml-2 text-orange-600 font-bold">
+                                                {formatPackStock(item.qty, item.measurement_value)}
+                                            </span>
+                                        )}
+                                        {item.product_type !== 'pack' && item.measurement_value && (
+                                            <span className="text-[8px] bg-blue-50 text-blue-600 px-1 rounded border border-blue-100 font-bold">
+                                                {item.measurement_value}{item.measurement_unit}
+                                            </span>
+                                        )}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <small>${item.price.toFixed(2)}</small>
+                                        <small className="text-[10px] text-gray-400">/ {t(item.unit_of_measure || 'unit')}</small>
+                                    </div>
                                 </div>
                                 <div className="item-controls">
-                                    <button className="icon-btn" onClick={() => updateQty(item.id, -1)}><Minus size={14} /></button>
-                                    <span>{item.qty}</span>
-                                    <button className="icon-btn" onClick={() => updateQty(item.id, 1)}><Plus size={14} /></button>
+                                    <button
+                                        className="icon-btn"
+                                        onClick={() => updateQty(item.id, - (item.product_type === 'fractional' ? 0.1 : 1))}
+                                    >
+                                        <Minus size={14} />
+                                    </button>
+                                    <div className="flex flex-col items-center w-16">
+                                        <input
+                                            type="number"
+                                            className="w-full text-center bg-transparent border-none font-bold text-sm focus:outline-none focus:ring-1 focus:ring-blue-200 rounded px-1"
+                                            value={item.qty}
+                                            step={item.product_type === 'fractional' ? "0.001" : "1"}
+                                            min="0"
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val) && val >= 0) {
+                                                    setCart(prev => prev.map(p =>
+                                                        p.id === item.id ? { ...p, qty: val } : p
+                                                    ));
+                                                }
+                                            }}
+                                        />
+                                        <span className="text-[8px] text-gray-400 uppercase tracking-tighter">{t(item.unit_of_measure || 'unit')}</span>
+                                    </div>
+                                    <button
+                                        className="icon-btn"
+                                        onClick={() => updateQty(item.id, (item.product_type === 'fractional' ? 0.1 : 1))}
+                                    >
+                                        <Plus size={14} />
+                                    </button>
                                 </div>
                                 <div className="item-total">
                                     ${(item.price * item.qty).toFixed(2)}
@@ -288,6 +492,117 @@ const POS = () => {
                 </div>
             </div>
 
+            {/* Weight/Fractional Modal */}
+            {selectedFractionalProduct && (
+                <div className="modal-overlay">
+                    <div className="modal-content weight-modal p-0 overflow-hidden max-w-sm w-full">
+                        <div className="bg-blue-600 p-6 text-white">
+                            <h3 className="text-lg font-bold uppercase tracking-wider">{selectedFractionalProduct.name}</h3>
+                            <div className="flex items-baseline gap-2 mt-4">
+                                <span className="text-4xl font-mono font-bold">{weightInput}</span>
+                                <span className="text-xl opacity-75">{t(selectedFractionalProduct.unit_of_measure)}</span>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-white">
+                            <div className="grid grid-cols-3 gap-2 mb-4">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0, '.', 'C'].map(btn => (
+                                    <button
+                                        key={btn}
+                                        type="button"
+                                        onClick={() => {
+                                            if (btn === 'C') setWeightInput('0');
+                                            else if (btn === '.') {
+                                                if (!weightInput.includes('.')) setWeightInput(weightInput + '.');
+                                            } else {
+                                                setWeightInput(weightInput === '0' ? btn.toString() : weightInput + btn);
+                                            }
+                                        }}
+                                        className="h-14 flex items-center justify-center text-xl font-bold bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-100 text-gray-800"
+                                    >
+                                        {btn}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button className="secondary-btn py-3" onClick={() => setSelectedFractionalProduct(null)}>{t('Cancel')}</button>
+                                <button className="primary-btn py-3" onClick={confirmFractionalAdd}>{t('Add to Cart')}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Pack Selection Modal */}
+            {selectedPackProduct && (
+                <div className="modal-overlay">
+                    <div className="modal-content p-0 overflow-hidden max-w-sm w-full">
+                        <div className="bg-orange-500 p-6 text-white">
+                            <h3 className="text-lg font-bold uppercase tracking-wider">{selectedPackProduct.name}</h3>
+                            <p className="text-sm opacity-90">{t('Pack contains')} {selectedPackProduct.measurement_value} {t('units')}</p>
+                        </div>
+
+                        <div className="p-6 bg-white space-y-6">
+                            <div className="grid grid-cols-1 gap-4">
+                                <button
+                                    className="flex flex-col items-center justify-center p-4 border-2 border-orange-100 hover:border-orange-500 hover:bg-orange-50 rounded-xl transition-all group w-full"
+                                    onClick={() => confirmPackAdd('pack')}
+                                >
+                                    <Box size={32} className="text-orange-500 mb-2 group-hover:scale-110 transition-transform" />
+                                    <span className="font-bold text-gray-800">{t('Sell Full Pack')}</span>
+                                    <span className="text-xs text-gray-400">({selectedPackProduct.measurement_value} {t('units')})</span>
+                                </button>
+
+                                <div className="relative py-2">
+                                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center px-4">
+                                        <div className="w-full border-t border-gray-100"></div>
+                                        <span className="px-3 text-[10px] text-gray-300 font-bold uppercase tracking-widest bg-white">{t('OR')}</span>
+                                        <div className="w-full border-t border-gray-100"></div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">{t('Sell Individual Units')}</label>
+                                    <div className="flex gap-2">
+                                        <div className="flex-1 flex items-center bg-gray-50 rounded-lg border border-gray-100 px-3">
+                                            <Minus
+                                                size={18}
+                                                className="text-gray-400 cursor-pointer hover:text-orange-500"
+                                                onClick={() => setPackUnitsInput(Math.max(1, parseInt(packUnitsInput) - 1).toString())}
+                                            />
+                                            <input
+                                                type="number"
+                                                className="w-full text-center bg-transparent border-none font-bold text-lg py-2 focus:outline-none"
+                                                value={packUnitsInput}
+                                                onChange={(e) => setPackUnitsInput(e.target.value)}
+                                            />
+                                            <Plus
+                                                size={18}
+                                                className="text-gray-400 cursor-pointer hover:text-orange-500"
+                                                onClick={() => setPackUnitsInput((parseInt(packUnitsInput) + 1).toString())}
+                                            />
+                                        </div>
+                                        <button
+                                            className="px-6 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg transition-colors"
+                                            onClick={() => confirmPackAdd('unit')}
+                                        >
+                                            {t('Add')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                className="w-full py-2 text-gray-400 hover:text-gray-600 font-semibold text-sm transition-colors"
+                                onClick={() => setSelectedPackProduct(null)}
+                            >
+                                {t('Cancel')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Checkout Drawer */}
             <CheckoutDrawer
                 isOpen={isCheckoutOpen}
@@ -312,17 +627,6 @@ const POS = () => {
                 </div>
             )}
 
-            {/* Hidden Printable Area */}
-            <div id="printable-area">
-                {lastSale && (
-                    <ThermalReceipt
-                        sale={lastSale}
-                        customer={lastSale.customer}
-                        items={lastSale.items}
-                        storeInfo={storeSettings}
-                    />
-                )}
-            </div>
 
             <style>{`
         .pos-grid {
@@ -575,15 +879,69 @@ const POS = () => {
         .item-name span { font-weight: 600; color: #1e293b; font-size: 0.9rem; }
         .item-name small { color: #64748b; font-size: 0.8rem; }
 
-        .item-controls {
+        .item-controls-stepper {
           display: flex;
           align-items: center;
-          gap: 10px;
           background: white;
-          padding: 4px 8px;
-          border-radius: 8px;
           border: 1px solid #e2e8f0;
-          font-weight: 700;
+          border-radius: 9999px; /* Pill shape */
+          padding: 2px;
+          height: 36px;
+        }
+
+        .stepper-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent; /* Default transparent */
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 50%; /* Circular buttons inside */
+            transition: all 0.2s;
+        }
+        .stepper-btn:hover { background: #f1f5f9; color: var(--primary); }
+        .stepper-btn:active { background: #e2e8f0; }
+
+        .stepper-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 50px; /* Fixed width for stability directly */
+            position: relative;
+        }
+
+        .stepper-input {
+            width: 100%;
+            text-align: center;
+            border: none;
+            background: transparent;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #1e293b;
+            padding: 0;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .stepper-input:focus { outline: none; }
+        
+        /* Remove arrows from number input */
+        .stepper-input::-webkit-outer-spin-button,
+        .stepper-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .stepper-unit {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            line-height: 1;
         }
 
         .item-total { font-weight: 700; color: #1e293b; width: 60px; text-align: right; }
@@ -632,15 +990,6 @@ const POS = () => {
             box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
         }
         .pay-btn:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; }
-
-        .icon-btn { 
-          width: 24px; height: 24px; 
-          display: flex; align-items: center; justify-content: center;
-          background: transparent; border: none;
-          color: #64748b; cursor: pointer;
-          border-radius: 4px;
-        }
-        .icon-btn:hover { background: #f1f5f9; color: var(--primary); }
 
         .del-btn {
           color: #fca5a5;

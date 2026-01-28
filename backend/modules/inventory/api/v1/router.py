@@ -6,6 +6,8 @@ from modules.inventory.domain.models import Warehouse, StockMovement, Batch, Sto
 from modules.catalog.domain.models import Product
 from pydantic import BaseModel
 from datetime import datetime
+from modules.iam.api.v1.router import RoleChecker, get_current_user
+from modules.iam.domain.models import User, UserRole
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
 
@@ -19,8 +21,7 @@ class ReceiveStock(BaseModel):
     qty: float
     expiry_date: datetime | None = None
 
-from modules.iam.api.v1.router import RoleChecker
-from modules.iam.domain.models import UserRole
+# Removed duplicate imports
 
 @router.post("/warehouses", dependencies=[Depends(RoleChecker([UserRole.ADMIN]))])
 async def create_warehouse(warehouse: WarehouseCreate, db: AsyncSession = Depends(get_db)):
@@ -145,9 +146,12 @@ class StockLevel(BaseModel):
     name: str
     sku: str
     quantity: float
+    product_type: str | None = "unitary"
+    measurement_value: float | None = None
+    unit_of_measure: str | None = "unit"
 
 @router.get("/stock", response_model=list[StockLevel])
-async def get_stock_levels(db: AsyncSession = Depends(get_db)):
+async def get_stock_levels(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Calculate stock: IN + ADJUST (if pos) - OUT - COMMIT
     # Note: We assume ADJUST is strict. If ADJUST is signed in DB it's easier, but here we might need logic. 
     # For now, let's assuming ADJUST is strictly adding, and maybe we have ADJUST_OUT?
@@ -158,10 +162,13 @@ async def get_stock_levels(db: AsyncSession = Depends(get_db)):
         Product.id,
         Product.name,
         Product.sku,
+        Product.product_type,
+        Product.measurement_value,
+        Product.unit_of_measure,
         func.coalesce(func.sum(
             case(
                 (StockMovement.type == "IN", StockMovement.qty),
-                (StockMovement.type == "ADJUST", StockMovement.qty), # Assuming positive adjustment for now
+                (StockMovement.type == "ADJUST", StockMovement.qty),
                 (StockMovement.type == "OUT", -StockMovement.qty),
                 (StockMovement.type == "COMMIT", -StockMovement.qty),
                 else_=0
@@ -173,12 +180,20 @@ async def get_stock_levels(db: AsyncSession = Depends(get_db)):
     rows = result.all()
     
     return [
-        StockLevel(product_id=r.id, name=r.name, sku=r.sku, quantity=r.quantity)
+        StockLevel(
+            product_id=r.id, 
+            name=r.name, 
+            sku=r.sku, 
+            quantity=r.quantity,
+            product_type=r.product_type,
+            measurement_value=r.measurement_value,
+            unit_of_measure=r.unit_of_measure
+        )
         for r in rows
     ]
 
 @router.get("/alerts/low-stock")
-async def get_low_stock_alerts(db: AsyncSession = Depends(get_db)):
+async def get_low_stock_alerts(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Returns products where current stock is below or equal to the minimum stock level.
     """
@@ -220,7 +235,7 @@ async def get_low_stock_alerts(db: AsyncSession = Depends(get_db)):
 from modules.suppliers.domain.models import Supplier
 
 @router.get("/stock/{product_id}/details")
-async def get_product_stock_details(product_id: int, db: AsyncSession = Depends(get_db)):
+async def get_product_stock_details(product_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Returns a breakdown of stock by Supplier (based on Active Batches).
     For non-batch tracked items, this might just show historical receipts or a single 'General' entry.
@@ -292,3 +307,64 @@ async def get_product_stock_details(product_id: int, db: AsyncSession = Depends(
             })
             
     return details
+
+from datetime import timedelta
+
+@router.get("/expiring-soon")
+async def get_expiring_batches(days: int = 7, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Returns batches that have an expiry date within the next `days` or are already expired.
+    """
+    now = datetime.utcnow()
+    threshold = now + timedelta(days=days)
+    
+    # Find batches with expiry dates <= threshold
+    stmt = select(Batch).where(
+        Batch.expiry_date != None,
+        Batch.expiry_date <= threshold
+    ).order_by(Batch.expiry_date.asc())
+    
+    result = await db.execute(stmt)
+    batches = result.scalars().all()
+    
+    expiring = []
+    for b in batches:
+        # Get the product info
+        product = await db.get(Product, b.product_id)
+        if not product:
+            continue
+        
+        # Calculate remaining stock for this batch
+        stock_stmt = select(
+            func.sum(
+                case(
+                    (StockMovement.type == "IN", StockMovement.qty),
+                    (StockMovement.type == "ADJUST", StockMovement.qty),
+                    (StockMovement.type == "OUT", -StockMovement.qty),
+                    (StockMovement.type == "COMMIT", -StockMovement.qty),
+                    else_=0
+                )
+            ).label("qty")
+        ).where(StockMovement.batch_id == b.id)
+        
+        stock_result = await db.execute(stock_stmt)
+        qty = stock_result.scalar() or 0
+        
+        if qty <= 0:
+            continue  # Skip depleted batches
+            
+        is_expired = b.expiry_date < now
+        days_until = (b.expiry_date - now).days if not is_expired else 0
+        
+        expiring.append({
+            "batch_id": b.id,
+            "product_id": b.product_id,
+            "product_name": product.name,
+            "sku": b.sku,
+            "expiry_date": b.expiry_date.isoformat(),
+            "quantity": qty,
+            "is_expired": is_expired,
+            "days_until_expiry": days_until
+        })
+    
+    return expiring

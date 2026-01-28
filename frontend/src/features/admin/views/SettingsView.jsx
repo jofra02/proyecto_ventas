@@ -105,16 +105,14 @@ const SettingsView = () => {
             subtitle={t('Configure basic information and regional preferences')}
             icon={SettingsIcon}
             actions={
-                isDirty && (
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="primary-btn flex items-center gap-2"
-                    >
-                        <Save size={18} />
-                        {saving ? t('Saving...') : t('Save Changes')}
-                    </button>
-                )
+                <button
+                    onClick={handleSave}
+                    disabled={!isDirty || saving}
+                    className={`primary-btn flex items-center gap-2 ${!isDirty ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                    <Save size={18} />
+                    {saving ? t('Saving...') : t('Save Changes')}
+                </button>
             }
         >
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

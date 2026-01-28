@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import React, { useState } from 'react';
 import Drawer from '../../components/common/Drawer';
 import { useLanguage } from '../../i18n/LanguageContext';
 import PermissionSelector from './PermissionSelector';
+import { useNotification } from '../../context/NotificationContext';
 
 const CreateUserDrawer = ({ isOpen, onClose, onSuccess }) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -24,7 +25,7 @@ const CreateUserDrawer = ({ isOpen, onClose, onSuccess }) => {
             setPermissions([]);
         } catch (err) {
             console.error(err);
-            alert(t("Failed to create user. Username might exist."));
+            showNotification(t("Failed to create user. Username might exist."), "error");
         } finally {
             setLoading(false);
         }

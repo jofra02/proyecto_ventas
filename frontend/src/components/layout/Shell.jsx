@@ -13,7 +13,8 @@ import {
   LogOut,
   Store, // For Sale Mode
   Settings,
-  Truck
+  Truck,
+  DollarSign
 } from 'lucide-react';
 import Footer from './Footer';
 
@@ -57,10 +58,10 @@ const AppShell = ({ children }) => {
       ]
     },
     {
-      title: t('CRM & Finance'),
+      title: t('Finance'),
       items: [
         { to: '/customers', icon: Users, label: t('Customers'), perm: PERMISSIONS.MANAGE_CUSTOMERS, module: 'customers' },
-        { to: '/payments', icon: CreditCard, label: t('Payments'), perm: PERMISSIONS.VIEW_PAYMENTS, module: 'payments' }
+        { to: '/finance', icon: DollarSign, label: t('Finance'), perm: null, module: 'finance' }
       ]
     }
   ];

@@ -3,9 +3,11 @@ import api from '../../services/api';
 import Drawer from '../../components/common/Drawer';
 import { User, Banknote, CreditCard } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const CheckoutDrawer = ({ isOpen, onClose, cart, total, onComplete }) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [method, setMethod] = useState('cash');
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -27,7 +29,7 @@ const CheckoutDrawer = ({ isOpen, onClose, cart, total, onComplete }) => {
             // 1. Create Sale
             const salePayload = {
                 warehouse_id: 1, // Hardcoded for now, ideal: select from user context/shift
-                customer_id: selectedCustomer,
+                customer_id: selectedCustomer || null,
                 items: cart.map(item => ({
                     product_id: item.id,
                     qty: item.qty,
@@ -45,8 +47,8 @@ const CheckoutDrawer = ({ isOpen, onClose, cart, total, onComplete }) => {
             const docRes = await api.post('/documents/issue', { sale_id: saleId });
 
             // 4. Register Payment
-            await api.post('/payments/', {
-                customer_id: selectedCustomer,
+            await api.post('/finance/payments/', {
+                customer_id: selectedCustomer || null,
                 amount: total,
                 method: method,
                 idempotency_key: `POS-${saleId}-${Date.now()}`
@@ -61,7 +63,7 @@ const CheckoutDrawer = ({ isOpen, onClose, cart, total, onComplete }) => {
             onClose();
         } catch (err) {
             console.error(err);
-            alert(t("Transaction failed. Check console."));
+            showNotification(t("Transaction failed. Check console."), 'error');
         } finally {
             setLoading(false);
         }

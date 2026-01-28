@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Users, Plus, Edit, Eye } from 'lucide-react';
+import { Users, Plus, Edit, Eye, UserPlus, CreditCard } from 'lucide-react';
 import CustomerDrawer from './CustomerDrawer';
 import DataLayout from '../../components/layout/DataLayout';
 import { useLanguage } from '../../i18n/LanguageContext';

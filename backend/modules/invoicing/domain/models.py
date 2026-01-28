@@ -16,4 +16,10 @@ class Document(Base):
     status = Column(String, default=DocumentStatus.DRAFT.value)
     total = Column(Float, default=0.0)
     
+    # Fiscal Snapshot at issuance time
+    store_name = Column(String, nullable=True)
+    store_address = Column(String, nullable=True)
+    store_cuit = Column(String, nullable=True)
+    store_iva_status = Column(String, nullable=True)
+    
     created_at = Column(DateTime, default=datetime.utcnow)

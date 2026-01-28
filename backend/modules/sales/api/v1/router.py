@@ -4,6 +4,8 @@ from sqlalchemy import select
 from core.database import get_db
 from modules.sales.domain.models import Sale, SaleItem, SaleStatus
 from modules.inventory.application.service import StockService
+from modules.iam.api.v1.router import get_current_user
+from modules.iam.domain.models import User
 from pydantic import BaseModel
 from typing import List
 
@@ -30,7 +32,7 @@ class SaleRead(BaseModel):
         from_attributes = True
 
 @router.post("/", response_model=SaleRead)
-async def create_sale(data: SaleCreate, db: AsyncSession = Depends(get_db)):
+async def create_sale(data: SaleCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     sale = Sale(
         warehouse_id=data.warehouse_id, 
         customer_id=data.customer_id,
@@ -48,7 +50,7 @@ async def create_sale(data: SaleCreate, db: AsyncSession = Depends(get_db)):
     return sale
 
 @router.post("/{sale_id}/confirm")
-async def confirm_sale(sale_id: int, db: AsyncSession = Depends(get_db)):
+async def confirm_sale(sale_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     sale = await db.get(Sale, sale_id)
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
@@ -77,7 +79,7 @@ async def confirm_sale(sale_id: int, db: AsyncSession = Depends(get_db)):
 from sqlalchemy.orm import selectinload
 
 @router.get("/", response_model=List[SaleRead])
-async def list_sales(skip: int = 0, limit: int = 50, db: AsyncSession = Depends(get_db)):
+async def list_sales(skip: int = 0, limit: int = 50, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Include items for now, though normally we might omit them in list view for performance
     # But for a simple POS list, showing items is fine or we can use a simpler Read model
     stmt = select(Sale).options(selectinload(Sale.items)).offset(skip).limit(limit).order_by(Sale.id.desc())
@@ -85,7 +87,7 @@ async def list_sales(skip: int = 0, limit: int = 50, db: AsyncSession = Depends(
     return result.scalars().all()
 
 @router.get("/{sale_id}")
-async def get_sale(sale_id: int, db: AsyncSession = Depends(get_db)):
+async def get_sale(sale_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     stmt = select(Sale).options(selectinload(Sale.items)).where(Sale.id == sale_id)
     result = await db.execute(stmt)
     sale = result.scalar_one_or_none()
@@ -109,7 +111,8 @@ async def get_sales_summary(
     start_date: datetime | None = None, 
     end_date: datetime | None = None, 
     days: int | None = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Returns total revenue, total orders, and average order value.
@@ -187,7 +190,8 @@ async def get_sales_trend(
     start_date: datetime | None = None, 
     end_date: datetime | None = None, 
     days: int | None = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     service = SalesAnalyticsService(db)
     # Service logic now expects dates. If 'days' passed, convert here or in service.
@@ -207,7 +211,8 @@ async def get_top_products(
     end_date: datetime | None = None, 
     days: int | None = None,
     limit: int = 5, 
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Returns top selling products by quantity.

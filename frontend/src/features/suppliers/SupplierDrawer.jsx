@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
-import Drawer from '../../components/common/Drawer';
 import { Truck, Save } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
+import api from '../../services/api';
+import Drawer from '../../components/common/Drawer';
 
 const SupplierDrawer = ({ isOpen, onClose, onSuccess, initialData }) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [formData, setFormData] = useState({
         name: '',
         contact_name: '',
@@ -72,7 +74,7 @@ const SupplierDrawer = ({ isOpen, onClose, onSuccess, initialData }) => {
             onClose();
         } catch (err) {
             console.error(err);
-            alert(t("Error saving supplier"));
+            showNotification(t("Error saving supplier"), "error");
         } finally {
             setLoading(false);
         }

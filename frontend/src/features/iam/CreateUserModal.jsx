@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import Modal from '../../components/common/Modal';
 import api from '../../services/api';
 import PermissionSelector from './PermissionSelector';
+import { useNotification } from '../../context/NotificationContext';
+import { useLanguage } from '../../i18n/LanguageContext'; // Added import
 
 const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
+    const { showNotification } = useNotification();
+    const { t } = useLanguage(); // Added useLanguage hook
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -22,7 +26,7 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
             setPermissions([]);
         } catch (err) {
             console.error(err);
-            alert("Failed to create user. Username might exist.");
+            showNotification(t("Failed to create user. Username might exist."), "error"); // Modified message with t()
         } finally {
             setLoading(false);
         }

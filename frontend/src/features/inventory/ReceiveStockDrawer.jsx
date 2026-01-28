@@ -4,9 +4,11 @@ import Drawer from '../../components/common/Drawer';
 import { Plus, Trash, Save, Upload } from 'lucide-react';
 
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const ReceiveStockDrawer = ({ isOpen, onClose, onSuccess }) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [products, setProducts] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [items, setItems] = useState([{ product_id: '', qty: '', expiry_date: '' }]);
@@ -92,9 +94,9 @@ const ReceiveStockDrawer = ({ isOpen, onClose, onSuccess }) => {
                 setItems([...currentItems, ...newItems]);
                 let msg = t('Loaded {count} items from CSV.').replace('{count}', newItems.length);
                 if (missingProviders > 0) msg += `\n${t('Warning: {missing} providers in CSV came up empty or not found. Please select manually.').replace('{missing}', missingProviders)}`;
-                alert(msg);
+                showNotification(msg, 'info');
             } else {
-                alert(t("No valid items found in CSV. Expected format: SKU, Qty, Provider (opt)"));
+                showNotification(t("No valid items found in CSV. Expected format: SKU, Qty, Provider (opt)"), 'warning');
             }
         };
         reader.readAsText(file);
@@ -106,7 +108,7 @@ const ReceiveStockDrawer = ({ isOpen, onClose, onSuccess }) => {
         // Validation: Every item must have a supplier
         const missingSupplier = items.some(i => i.product_id && !i.supplier_id);
         if (missingSupplier) {
-            alert(t("Every row must have a Provider selected..."));
+            showNotification(t("Every row must have a Provider selected..."), 'warning');
             return;
         }
 
@@ -120,7 +122,7 @@ const ReceiveStockDrawer = ({ isOpen, onClose, onSuccess }) => {
             }));
 
             if (validItems.length === 0) {
-                alert(t("Please add at least one valid item"));
+                showNotification(t("Please add at least one valid item"), 'warning');
                 setLoading(false);
                 return;
             }
@@ -130,11 +132,11 @@ const ReceiveStockDrawer = ({ isOpen, onClose, onSuccess }) => {
                 supplier_id: supplierId ? parseInt(supplierId) : null,
                 items: validItems
             });
-            alert(t("Stock received successfully!"));
+            showNotification(t("Stock received successfully!"), 'success');
             onSuccess();
         } catch (err) {
             console.error(err);
-            alert(t("Error receiving stock batch"));
+            showNotification(t("Error receiving stock batch"), 'error');
         } finally {
             setLoading(false);
         }
@@ -211,8 +213,13 @@ const ReceiveStockDrawer = ({ isOpen, onClose, onSuccess }) => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="w-24">
-                                    <label className="text-xs font-medium text-gray-500 mb-1 block">{t('Qty')}</label>
+                                <div className="w-24 relative">
+                                    <label className="text-xs font-medium text-gray-500 mb-1 block">
+                                        {t('Qty')}
+                                        {products.find(p => p.id === parseInt(item.product_id))?.product_type === 'pack' && (
+                                            <span className="text-orange-600 font-bold ml-1">({t('Packs')})</span>
+                                        )}
+                                    </label>
                                     <input
                                         type="number"
                                         value={item.qty}
@@ -221,6 +228,11 @@ const ReceiveStockDrawer = ({ isOpen, onClose, onSuccess }) => {
                                         min="1"
                                         required
                                     />
+                                    {products.find(p => p.id === parseInt(item.product_id))?.product_type === 'pack' && item.qty && (
+                                        <div className="absolute top-full left-0 text-[10px] text-gray-400 mt-0.5 whitespace-nowrap italic">
+                                            {Math.round(parseFloat(item.qty) * (products.find(p => p.id === parseInt(item.product_id))?.measurement_value || 1))} {t('units')}
+                                        </div>
+                                    )}
                                 </div>
                                 <button
                                     type="button"

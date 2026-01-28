@@ -25,6 +25,7 @@ class Batch(Base):
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     sku = Column(String, index=True, nullable=False) # Denormalized for easier lookup
+    manufacture_date = Column(DateTime, nullable=True)
     expiry_date = Column(DateTime, nullable=True)
     received_at = Column(DateTime, default=datetime.utcnow)
 

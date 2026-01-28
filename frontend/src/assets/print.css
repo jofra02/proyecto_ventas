@@ -6,11 +6,20 @@
         visibility: hidden;
     }
 
-    /* Hide scrollbars, headers, sidebars */
+    /* Remove browser-injected margins/header/footer */
+    @page {
+        margin: 0;
+        size: auto;
+    }
+
+    /* Hide UI elements */
     .erp-layout,
     .modal-overlay,
     .sidebar,
-    .top-bar {
+    .top-bar,
+    .drawer-overlay,
+    .modal-content,
+    .drawer-content {
         display: none !important;
     }
 
@@ -25,9 +34,10 @@
         left: 0;
         top: 0;
         width: 80mm;
-        /* Standard Thermal Width */
         margin: 0;
-        padding: 0;
+        padding: 4mm;
+        /* Left/Right padding for safe printing */
+        box-sizing: border-box;
     }
 }
 

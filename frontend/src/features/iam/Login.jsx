@@ -3,9 +3,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const Login = () => {
   const { t, language, setLanguage } = useLanguage();
+  const { showNotification } = useNotification();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
@@ -22,7 +24,7 @@ const Login = () => {
         navigate('/');
       }
     } catch (err) {
-      alert(t("Invalid credentials"));
+      showNotification(t("Invalid credentials"), "error");
     }
   };
 

@@ -7,22 +7,37 @@ import ThermalReceipt from '../../components/printing/ThermalReceipt';
 import DataLayout from '../../components/layout/DataLayout';
 import StatusBadge from '../../components/common/StatusBadge';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { usePrinter } from '../../context/PrintContext';
+import { Printer } from 'lucide-react';
 
 const InvoiceList = () => {
     const { t } = useLanguage();
+    const { print } = usePrinter();
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedDoc, setSelectedDoc] = useState(null);
     const [customers, setCustomers] = useState({});
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [storeSettings, setStoreSettings] = useState(null);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [invRes, custRes] = await Promise.all([
+                const [invRes, custRes, nameRes, addrRes, cuitRes, ivaRes] = await Promise.all([
                     api.get('/documents/'),
-                    api.get('/customers/')
+                    api.get('/customers/'),
+                    api.get('/admin/settings/store_name').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_address').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_cuit').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_iva_status').catch(() => ({ data: { value: '' } }))
                 ]);
+
+                setStoreSettings({
+                    store_name: nameRes.data.value,
+                    store_address: addrRes.data.value,
+                    store_cuit: cuitRes.data.value,
+                    store_iva_status: ivaRes.data.value
+                });
 
                 const custMap = {};
                 custRes.data.forEach(c => custMap[c.id] = c);
@@ -94,7 +109,30 @@ const InvoiceList = () => {
                             sale={{ id: selectedDoc.document.sale_id, status: 'ISSUED' }}
                             customer={selectedDoc.customer_id ? customers[selectedDoc.customer_id] : null}
                             items={selectedDoc.items.map(i => ({ ...i, name: "Item " + i.product_id }))}
+                            storeInfo={selectedDoc.document.store_name ? {
+                                store_name: selectedDoc.document.store_name,
+                                store_address: selectedDoc.document.store_address,
+                                store_cuit: selectedDoc.document.store_cuit,
+                                store_iva_status: selectedDoc.document.store_iva_status
+                            } : storeSettings}
                         />
+                        <button
+                            className="primary-btn mt-6 flex items-center gap-2 w-full justify-center"
+                            onClick={() => print({
+                                sale: { id: selectedDoc.document.sale_id, status: 'ISSUED' },
+                                customer: selectedDoc.customer_id ? customers[selectedDoc.customer_id] : null,
+                                items: selectedDoc.items.map(i => ({ ...i, name: "Item " + i.product_id })),
+                                storeInfo: selectedDoc.document.store_name ? {
+                                    store_name: selectedDoc.document.store_name,
+                                    store_address: selectedDoc.document.store_address,
+                                    store_cuit: selectedDoc.document.store_cuit,
+                                    store_iva_status: selectedDoc.document.store_iva_status
+                                } : storeSettings
+                            })}
+                        >
+                            <Printer size={18} />
+                            {t("Print Document")}
+                        </button>
                     </div>
                 )}
             </Drawer>

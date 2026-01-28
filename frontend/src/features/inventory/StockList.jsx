@@ -7,6 +7,7 @@ import DataLayout from '../../components/layout/DataLayout';
 import StatusBadge from '../../components/common/StatusBadge';
 
 import { useLanguage } from '../../i18n/LanguageContext';
+import { formatPackStock } from '../../utils/format';
 
 const StockList = () => {
     const { t } = useLanguage();
@@ -83,8 +84,21 @@ const StockList = () => {
                                 </td>
                                 <td className="font-mono text-sm text-blue-600">{item.sku}</td>
                                 <td className="font-medium">{item.name}</td>
-                                <td className="text-right font-bold text-lg">
-                                    {item.quantity}
+                                <td className="text-right">
+                                    <div className="flex flex-col items-end">
+                                        <span className="font-bold text-lg">
+                                            {item.product_type === 'pack' ? (
+                                                formatPackStock(item.quantity, item.measurement_value)
+                                            ) : (
+                                                `${item.quantity} ${t(item.unit_of_measure || 'unit')}`
+                                            )}
+                                        </span>
+                                        {item.product_type === 'pack' && item.measurement_value && (
+                                            <span className="text-xs text-gray-500 font-medium italic">
+                                                ({Math.round(item.quantity * item.measurement_value)} {t('units')})
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td>
                                     {item.quantity <= 0 ? (
@@ -186,7 +200,11 @@ const StockDetailsRow = ({ productId }) => {
                         {d.supplier}
                     </td>
                     <td className="text-right text-sm font-bold text-gray-700 py-2 pr-4">
-                        {d.qty}
+                        {details.product_type === 'pack' ? (
+                            formatPackStock(d.qty, details.measurement_value)
+                        ) : (
+                            d.qty
+                        )}
                     </td>
                     <td className="text-xs text-gray-500 py-2">
                         {d.batches[0]?.expiry ? `Exp: ${new Date(d.batches[0].expiry).toLocaleDateString()}` : ''}

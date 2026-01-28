@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
 import Modal from '../../components/common/Modal';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
+import api from '../../services/api';
 
 const StockAdjustmentModal = ({ isOpen, onClose, onSuccess, initialProduct }) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [products, setProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(initialProduct?.product_id || '');
     const [qty, setQty] = useState('');
@@ -23,7 +25,7 @@ const StockAdjustmentModal = ({ isOpen, onClose, onSuccess, initialProduct }) =>
                 setSelectedProduct(initialProduct.product_id);
             }
         }
-    }, [isOpen, initialProduct]);
+    }, [isOpen, initialProduct, selectedProduct]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -35,11 +37,11 @@ const StockAdjustmentModal = ({ isOpen, onClose, onSuccess, initialProduct }) =>
                 qty: parseFloat(qty),
                 reason: reason
             });
-            alert(t("Stock corrected successfully!"));
+            showNotification(t("Stock corrected successfully!"), "success");
             onSuccess();
         } catch (err) {
             console.error(err);
-            alert(t("Error adjusting stock"));
+            showNotification(t("Error adjusting stock"), "error");
         } finally {
             setLoading(false);
         }
@@ -67,7 +69,12 @@ const StockAdjustmentModal = ({ isOpen, onClose, onSuccess, initialProduct }) =>
                 </div>
 
                 <div className="input-group">
-                    <label>{t('Adjustment Quantity (+/-)')}</label>
+                    <label>
+                        {t('Adjustment Quantity (+/-)')}
+                        {products.find(p => p.id === parseInt(selectedProduct))?.product_type === 'pack' && (
+                            <span className="text-orange-600 font-bold ml-1">({t('In Packs')})</span>
+                        )}
+                    </label>
                     <input
                         type="number"
                         step="any"
@@ -76,6 +83,11 @@ const StockAdjustmentModal = ({ isOpen, onClose, onSuccess, initialProduct }) =>
                         required
                         placeholder="-5 o 10"
                     />
+                    {products.find(p => p.id === parseInt(selectedProduct))?.product_type === 'pack' && qty && (
+                        <div className="text-[10px] text-gray-400 mt-1 italic">
+                            {t('This will adjust')} {Math.abs(parseFloat(qty) * (products.find(p => p.id === parseInt(selectedProduct))?.measurement_value || 1))} {t('units')}
+                        </div>
+                    )}
                 </div>
 
                 <div className="input-group">

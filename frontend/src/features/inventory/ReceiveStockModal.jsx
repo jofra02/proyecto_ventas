@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
 import Modal from '../../components/common/Modal';
 import { Plus, Trash, Save } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
+import { useState, useEffect } from 'react'; // Added useState and useEffect imports
+import api from '../../services/api'; // Added api import
 
 const ReceiveStockModal = ({ isOpen, onClose, onSuccess }) => {
+    const { showNotification } = useNotification();
     const [products, setProducts] = useState([]);
     const [items, setItems] = useState([{ product_id: '', qty: '', expiry_date: '' }]);
     const [loading, setLoading] = useState(false);
@@ -45,7 +47,7 @@ const ReceiveStockModal = ({ isOpen, onClose, onSuccess }) => {
             }));
 
             if (validItems.length === 0) {
-                alert("Please add at least one valid item");
+                showNotification("Please add at least one valid item", "warning");
                 setLoading(false);
                 return;
             }
@@ -54,11 +56,11 @@ const ReceiveStockModal = ({ isOpen, onClose, onSuccess }) => {
                 warehouse_id: 1, // Default warehouse
                 items: validItems
             });
-            alert("Batch stock received successfully!");
+            showNotification("Batch stock received successfully!", "success");
             onSuccess();
         } catch (err) {
             console.error(err);
-            alert("Error receiving stock batch");
+            showNotification("Error receiving stock batch", "error");
         } finally {
             setLoading(false);
         }

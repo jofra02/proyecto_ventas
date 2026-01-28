@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
 import Drawer from '../../components/common/Drawer';
+import api from '../../services/api';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const CustomerDrawer = ({ isOpen, onClose, customer, onSuccess }) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [formData, setFormData] = useState({ name: '', tax_id: '', email: '' });
     const [loading, setLoading] = useState(false);
 
@@ -32,7 +34,7 @@ const CustomerDrawer = ({ isOpen, onClose, customer, onSuccess }) => {
             onSuccess();
         } catch (err) {
             console.error(err);
-            alert(t("Error saving customer"));
+            showNotification(t("Error saving customer"), "error");
         } finally {
             setLoading(false);
         }

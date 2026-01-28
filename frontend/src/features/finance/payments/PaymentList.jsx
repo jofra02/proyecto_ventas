@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import api from '../../../services/api';
 import { CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
-import { useLanguage } from '../../i18n/LanguageContext';
+import { useLanguage } from '../../../i18n/LanguageContext';
 
 const PaymentList = () => {
     const { t } = useLanguage();
@@ -15,7 +15,7 @@ const PaymentList = () => {
         const fetchData = async () => {
             try {
                 const [payRes, custRes] = await Promise.all([
-                    api.get('/payments/'),
+                    api.get('/finance/payments/'),
                     api.get('/customers/')
                 ]);
 

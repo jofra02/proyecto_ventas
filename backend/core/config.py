@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # In production, this MUST be set via environment variable.
     SECRET_KEY: str = os.getenv("SECRET_KEY", "WARNING_UNSECURE_DEV_KEY_CHANGE_ME_IMMEDIATELY")
     
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1 hour
     ALGORITHM: str = "HS256"
     
     # Database

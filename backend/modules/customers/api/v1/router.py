@@ -3,6 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from core.database import get_db
 from modules.customers.domain.models import Customer
+from modules.iam.api.v1.router import RoleChecker, get_current_user
+from modules.iam.domain.models import User, UserRole
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
@@ -15,8 +17,7 @@ class CustomerCreate(BaseModel):
 class CustomerRead(CustomerCreate):
     id: int
 
-from modules.iam.api.v1.router import RoleChecker
-from modules.iam.domain.models import UserRole
+# Removed duplicate imports
 
 @router.post("/", response_model=CustomerRead, dependencies=[Depends(RoleChecker([UserRole.ADMIN, UserRole.SUPERVISOR]))])
 async def create_customer(data: CustomerCreate, db: AsyncSession = Depends(get_db)):
@@ -31,7 +32,7 @@ async def create_customer(data: CustomerCreate, db: AsyncSession = Depends(get_d
     return customer
 
 @router.get("/", response_model=list[CustomerRead])
-async def list_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def list_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(select(Customer).offset(skip).limit(limit))
     return result.scalars().all()
 
@@ -54,7 +55,8 @@ from sqlalchemy import func
 @router.get("/analytics/summary")
 async def get_customer_analytics(
     days: int | None = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Returns total customers and new customers in the last N days (with trend).

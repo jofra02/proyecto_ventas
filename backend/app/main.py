@@ -26,7 +26,7 @@ def create_app() -> FastAPI:
     from modules.inventory.api.v1 import router as inventory_router
     from modules.sales.api.v1 import router as sales_router
     from modules.customers.api.v1 import router as customers_router
-    from modules.payments.api.v1 import router as payments_router
+    from modules.customers.api.v1 import router as customers_router
     from modules.admin.api.v1 import router as admin_router
     from modules.suppliers.api.v1 import router as suppliers_router
 
@@ -35,7 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(inventory_router.router, prefix=settings.API_V1_STR)
     app.include_router(sales_router.router, prefix=settings.API_V1_STR)
     app.include_router(customers_router.router, prefix=settings.API_V1_STR)
-    app.include_router(payments_router.router, prefix=settings.API_V1_STR)
+    app.include_router(customers_router.router, prefix=settings.API_V1_STR)
     app.include_router(admin_router.router, prefix=settings.API_V1_STR)
     app.include_router(suppliers_router.router, prefix=settings.API_V1_STR)
     
@@ -44,22 +44,24 @@ def create_app() -> FastAPI:
     from modules.sales import manifest as sales_manifest
     from modules.invoicing import manifest as invoicing_manifest
     from modules.customers import manifest as customers_manifest
-    from modules.payments import manifest as payments_manifest
+    from modules.customers import manifest as customers_manifest
     from modules.accounts_receivable import manifest as ar_manifest
     from modules.picking import manifest as picking_manifest
     from modules.iam import manifest as iam_manifest
     from modules.suppliers import manifest as suppliers_manifest
+    from modules.finance import manifest as finance_manifest
     
     registry.register_module(catalog_manifest.module)
     registry.register_module(inventory_manifest.module)
     registry.register_module(sales_manifest.module)
     registry.register_module(invoicing_manifest.module)
     registry.register_module(customers_manifest.module)
-    registry.register_module(payments_manifest.module)
+    registry.register_module(customers_manifest.module)
     registry.register_module(ar_manifest.module)
     registry.register_module(picking_manifest.module)
     registry.register_module(iam_manifest.module)
     registry.register_module(suppliers_manifest.module)
+    registry.register_module(finance_manifest.module)
     
     # 2. Include Routers
     registry.include_routers(app, prefix=settings.API_V1_STR)
