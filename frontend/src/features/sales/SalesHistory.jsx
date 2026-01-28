@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import api from '../../services/api';
 // import Modal from '../../components/common/Modal'; // Removed
 import Drawer from '../../components/common/Drawer'; // Added
@@ -6,25 +7,40 @@ import { ShoppingCart, Eye, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import ThermalReceipt from '../../components/printing/ThermalReceipt';
 import DataLayout from '../../components/layout/DataLayout';
+import { usePrinter } from '../../context/PrintContext';
 import StatusBadge from '../../components/common/StatusBadge';
 
 const SalesHistory = () => {
+    const { t } = useLanguage();
+    const { print } = usePrinter();
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedSale, setSelectedSale] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [products, setProducts] = useState({});
     const [customers, setCustomers] = useState({});
+    const [storeSettings, setStoreSettings] = useState(null);
 
     useEffect(() => {
         // Fetch sales and products to map names
         const fetchData = async () => {
             try {
-                const [salesRes, prodRes, custRes] = await Promise.all([
+                const [salesRes, prodRes, custRes, nameRes, addrRes, cuitRes, ivaRes] = await Promise.all([
                     api.get('/sales/'),
                     api.get('/products/'),
-                    api.get('/customers/')
+                    api.get('/customers/'),
+                    api.get('/admin/settings/store_name').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_address').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_cuit').catch(() => ({ data: { value: '' } })),
+                    api.get('/admin/settings/store_iva_status').catch(() => ({ data: { value: '' } }))
                 ]);
+
+                setStoreSettings({
+                    store_name: nameRes.data.value,
+                    store_address: addrRes.data.value,
+                    store_cuit: cuitRes.data.value,
+                    store_iva_status: ivaRes.data.value
+                });
 
                 const prodMap = {};
                 prodRes.data.forEach(p => prodMap[p.id] = p);
@@ -55,50 +71,42 @@ const SalesHistory = () => {
 
     return (
         <>
-            {/* Hidden Printable Area */}
-            <div id="printable-area">
-                <ThermalReceipt
-                    sale={selectedSale}
-                    customer={selectedSale?.customer_id ? customers[selectedSale.customer_id] : null}
-                    items={selectedSale?.items.map(i => ({ ...i, name: products[i.product_id]?.name })) || []}
-                />
-            </div>
 
             <DataLayout
-                title="Sales History"
-                subtitle="View past transactions and receipts"
+                title={t("Sales History")}
+                subtitle={t("View past transactions and receipts")}
                 icon={ShoppingCart}
             >
                 <table className="custom-table">
                     <thead>
                         <tr>
-                            <th>Receipt #</th>
-                            <th>Status</th>
-                            <th>Items</th>
-                            <th className="text-right">Total</th>
-                            <th className="text-right">Action</th>
+                            <th>{t("Receipt")} #</th>
+                            <th>{t("Status")}</th>
+                            <th>{t("Items")}</th>
+                            <th className="text-right">{t("Total")}</th>
+                            <th className="text-right">{t("Action")}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="5" className="text-center py-8 text-gray-400">Loading sales...</td></tr>
+                            <tr><td colSpan="5" className="text-center py-8 text-gray-400">{t("Loading sales...")}</td></tr>
                         ) : sales.length === 0 ? (
-                            <tr><td colSpan="5" className="text-center py-8 text-gray-400">No sales found.</td></tr>
+                            <tr><td colSpan="5" className="text-center py-8 text-gray-400">{t("No sales found.")}</td></tr>
                         ) : sales.map(sale => (
                             <tr key={sale.id} className="hover:bg-slate-50">
                                 <td className="font-mono text-blue-600 font-bold">#{sale.id.toString().padStart(6, '0')}</td>
                                 <td>
                                     <StatusBadge type={sale.status === 'CONFIRMED' ? 'success' : 'warning'}>
-                                        {sale.status}
+                                        {sale.status === 'CONFIRMED' ? t("CONFIRMED") : sale.status}
                                     </StatusBadge>
                                 </td>
-                                <td>{sale.items.length} items</td>
+                                <td>{sale.items.length} {t("items")}</td>
                                 <td className="text-right font-bold">
                                     ${calculateTotal(sale.items).toFixed(2)}
                                 </td>
                                 <td className="text-right">
                                     <button className="text-blue-600 flex items-center gap-1 ml-auto font-medium" onClick={() => openSale(sale)}>
-                                        <Eye size={16} /> View
+                                        <Eye size={16} /> {t("View")}
                                     </button>
                                 </td>
                             </tr>
@@ -111,7 +119,7 @@ const SalesHistory = () => {
             <Drawer
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={`Receipt #${selectedSale?.id}`}
+                title={`${t("Receipt")} #${selectedSale?.id}`}
                 size="md"
             >
                 {selectedSale && (
@@ -122,10 +130,10 @@ const SalesHistory = () => {
                             <p>State, Zip</p>
                         </div>
                         <div className="receipt-meta">
-                            <p><strong>Receipt #:</strong> {selectedSale.id}</p>
-                            <p><strong>Date:</strong> {format(new Date(), 'yyyy-MM-dd')}</p>
-                            <p><strong>Customer:</strong> {selectedSale.customer_id ? (customers[selectedSale.customer_id]?.name || `Client #${selectedSale.customer_id}`) : 'Walk-in Client'}</p>
-                            <p><strong>Status:</strong> {selectedSale.status}</p>
+                            <p><strong>{t("Receipt")} #:</strong> {selectedSale.id}</p>
+                            <p><strong>{t("Date")}:</strong> {format(new Date(), 'yyyy-MM-dd')}</p>
+                            <p><strong>{t("Customer")}:</strong> {selectedSale.customer_id ? (customers[selectedSale.customer_id]?.name || `${t("Client")} #${selectedSale.customer_id}`) : t('Walk-in Client')}</p>
+                            <p><strong>{t("Status")}:</strong> {selectedSale.status}</p>
                         </div>
 
                         <table className="w-full text-sm my-4">
@@ -155,8 +163,13 @@ const SalesHistory = () => {
                         </div>
 
                         <div className="mt-6 flex justify-center">
-                            <button className="secondary-btn flex items-center gap-2" onClick={() => window.print()}>
-                                <FileText size={16} /> Print Receipt
+                            <button className="secondary-btn flex items-center gap-2" onClick={() => print({
+                                sale: selectedSale,
+                                customer: selectedSale.customer_id ? customers[selectedSale.customer_id] : null,
+                                items: selectedSale.items.map(i => ({ ...i, name: products[i.product_id]?.name })),
+                                storeInfo: storeSettings
+                            })}>
+                                <FileText size={16} /> {t("Print Receipt")}
                             </button>
                         </div>
                     </div>

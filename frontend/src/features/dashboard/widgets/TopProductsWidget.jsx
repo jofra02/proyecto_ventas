@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { dashboardService } from '../services/dashboardService';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import { Trophy } from 'lucide-react';
 
 const TopProductsWidget = () => {
+    const { t } = useLanguage();
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,10 +26,10 @@ const TopProductsWidget = () => {
         <div className="bg-white rounded-xl p-6 border border-border shadow-sm h-full">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-primary">Top Products</h3>
+                    <h3 className="text-lg font-bold text-primary">{t('Top Products')}</h3>
                     <Trophy size={16} className="text-warning" />
                 </div>
-                <button className="text-sm text-primary hover:underline">View Report</button>
+                <button className="text-sm text-primary hover:underline">{t('View Report')}</button>
             </div>
 
             <div className="space-y-4 max-h-[300px] overflow-y-auto">
@@ -46,7 +48,7 @@ const TopProductsWidget = () => {
                         ))}
                     </div>
                 ) : products.length === 0 ? (
-                    <div className="text-center py-8 text-secondary text-sm">No sales yet.</div>
+                    <div className="text-center py-8 text-secondary text-sm">{t('No sales yet.')}</div>
                 ) : (
                     products.map((p, i) => (
                         <div key={p.product_id || p.id} className="flex items-center justify-between">
@@ -58,8 +60,8 @@ const TopProductsWidget = () => {
                                     #{i + 1}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-sidebar">{p.name || `Product #${p.product_id}`}</p>
-                                    <p className="text-xs text-secondary">{p.total_sold} units sold</p>
+                                    <p className="text-sm font-medium text-sidebar">{p.name || `${t('Product #')}${p.product_id}`}</p>
+                                    <p className="text-xs text-secondary">{p.total_sold} {t('units sold')}</p>
                                 </div>
                             </div>
                             <div className="text-right">

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
 import Modal from '../../components/common/Modal';
 import api from '../../services/api';
+import { useNotification } from '../../context/NotificationContext';
+import { useState } from 'react'; // Added missing import for useState
 
 const DebtPaymentModal = ({ isOpen, onClose, customerId, currentBalance, onSuccess }) => {
+    const { showNotification } = useNotification();
     const [amount, setAmount] = useState('');
     const [method, setMethod] = useState('cash');
     const [loading, setLoading] = useState(false);
@@ -20,9 +22,10 @@ const DebtPaymentModal = ({ isOpen, onClose, customerId, currentBalance, onSucce
                 idempotency_key: `DEBT-${customerId}-${Date.now()}` // Unique key prevents double-charge
             });
             onSuccess();
+            showNotification("Payment successful", "success"); // Added success notification
         } catch (err) {
             console.error(err);
-            alert("Payment failed");
+            showNotification(err);
         } finally {
             setLoading(false);
             setAmount('');

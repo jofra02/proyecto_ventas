@@ -11,58 +11,60 @@ import SalesHistory from './features/sales/SalesHistory'
 import CustomerList from './features/crm/CustomerList'
 import CustomerAccount from './features/crm/CustomerAccount'
 import InvoiceList from './features/invoicing/InvoiceList'
-import PaymentList from './features/payments/PaymentList'
+import FinanceView from './features/finance/FinanceView'
 import UserList from './features/iam/UserList'
 import SettingsView from './features/admin/views/SettingsView'
+import SupplierList from './features/suppliers/SupplierList'
+import { LanguageProvider } from './i18n/LanguageContext'
+import { NotificationProvider } from './context/NotificationContext'
+import { PrintProvider } from './context/PrintContext'
 
 const Protected = ({ children }) => {
   const { user, loading } = useAuth();
-  console.log("Protected Route:", { user, loading });
   if (loading) return <div className="h-screen w-screen flex items-center justify-center">Loading Application...</div>;
-  if (!user) console.warn("Redirecting to login");
   return user ? children : <Navigate to="/login" />;
 };
 
-// ...
-
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-
-      {/* POS: Accessible by everyone including Employees */}
-      <Route path="/pos" element={
-        <Protected>
-          <RequireRole roles={['ADMIN', 'SUPERVISOR', 'EMPLOYEE']}>
-            <POS />
-          </RequireRole>
-        </Protected>
-      } />
-
-      {/* Dashboard & Modules: Only Admin/Supervisor */}
-      <Route path="/*" element={
-        <Protected>
-          <RequireRole roles={['ADMIN', 'SUPERVISOR']}>
-            <AppShell>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="users" element={<UserList />} />
-                <Route path="admin/settings" element={<SettingsView />} />
-                <Route path="catalog" element={<ProductList />} />
-                <Route path="inventory" element={<StockList />} />
-                <Route path="sales" element={<SalesHistory />} />
-                <Route path="customers" element={<CustomerList />} />
-                <Route path="customers/:id/account" element={<CustomerAccount />} />
-                <Route path="invoicing" element={<InvoiceList />} />
-                <Route path="payments" element={<PaymentList />} />
-                {/* ... other feature routes ... */}
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
-            </AppShell>
-          </RequireRole>
-        </Protected>
-      } />
-    </Routes>
+    <LanguageProvider>
+      <NotificationProvider>
+        <PrintProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/pos" element={
+              <Protected>
+                <RequireRole roles={['ADMIN', 'SUPERVISOR', 'EMPLOYEE']}>
+                  <POS />
+                </RequireRole>
+              </Protected>
+            } />
+            <Route path="/*" element={
+              <Protected>
+                <RequireRole roles={['ADMIN', 'SUPERVISOR']}>
+                  <AppShell>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="users" element={<UserList />} />
+                      <Route path="admin/settings" element={<SettingsView />} />
+                      <Route path="finance" element={<FinanceView />} />
+                      <Route path="catalog" element={<ProductList />} />
+                      <Route path="inventory" element={<StockList />} />
+                      <Route path="sales" element={<SalesHistory />} />
+                      <Route path="invoicing" element={<InvoiceList />} />
+                      <Route path="customers" element={<CustomerList />} />
+                      <Route path="customers/:id/account" element={<CustomerAccount />} />
+                      <Route path="suppliers" element={<SupplierList />} />
+                      <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                  </AppShell>
+                </RequireRole>
+              </Protected>
+            } />
+          </Routes>
+        </PrintProvider>
+      </NotificationProvider>
+    </LanguageProvider>
   )
 }
 

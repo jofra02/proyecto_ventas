@@ -23,10 +23,23 @@ async def issue_document(data: IssueDocumentRequest, db: AsyncSession = Depends(
     # In a real app, we might recalculate or use stored total
     total = sum(item.qty * item.price for item in sale.items)
     
+    # Fetch current store settings for snapshot
+    from modules.admin.domain.models import SystemSetting
+    
+    settings_stmt = select(SystemSetting).where(SystemSetting.key.in_([
+        'store_name', 'store_address', 'store_cuit', 'store_iva_status'
+    ]))
+    settings_res = await db.execute(settings_stmt)
+    settings_dict = {s.key: s.value for s in settings_res.scalars().all()}
+    
     doc = Document(
         sale_id=sale.id,
         status=DocumentStatus.ISSUED.value,
-        total=total
+        total=total,
+        store_name=settings_dict.get('store_name', ''),
+        store_address=settings_dict.get('store_address', ''),
+        store_cuit=settings_dict.get('store_cuit', ''),
+        store_iva_status=settings_dict.get('store_iva_status', '')
     )
     db.add(doc)
     await db.flush()

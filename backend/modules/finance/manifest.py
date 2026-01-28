@@ -3,7 +3,8 @@ from .api.v1.router import router
 from .domain import models
 
 module = Module(
-    name="payments",
+    name="finance",
+    display_name="Finance",
     router=router,
-    models=[models.Payment]
+    models=[models.CostCategory, models.ProductCostComponent, models.Payment]
 )

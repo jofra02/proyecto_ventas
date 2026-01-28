@@ -5,6 +5,7 @@ from typing import List, Callable, Optional
 @dataclass
 class Module:
     name: str
+    display_name: Optional[str] = None # User-facing name
     router: Optional[object] = None # FastAPI APIRouter
     models: List[object] = None
     
@@ -12,6 +13,8 @@ class Module:
     def __post_init__(self):
         if self.models is None:
             self.models = []
+        if self.display_name is None:
+            self.display_name = self.name.title()
 
 class ModuleRegistry:
     def __init__(self):
@@ -35,10 +38,10 @@ from modules.iam.api.v1.router import router as iam_router
 from modules.catalog.api.v1.router import router as catalog_router
 from modules.inventory.api.v1.router import router as inventory_router
 from modules.sales.api.v1.router import router as sales_router
-from modules.payments.api.v1.router import router as payments_router
 from modules.accounts_receivable.api.v1.router import router as ar_router
 from modules.invoicing.api.v1.router import router as invoicing_router
 from modules.customers.api.v1.router import router as customer_router
+from modules.finance.api.v1.router import router as finance_router
 
 def register_modules(app: FastAPI):
     # Core
@@ -48,7 +51,7 @@ def register_modules(app: FastAPI):
     app.include_router(catalog_router, prefix="/api/v1")
     app.include_router(inventory_router, prefix="/api/v1")
     app.include_router(sales_router, prefix="/api/v1")
-    app.include_router(payments_router, prefix="/api/v1")
     app.include_router(ar_router, prefix="/api/v1")
     app.include_router(invoicing_router, prefix="/api/v1")
     app.include_router(customer_router, prefix="/api/v1")
+    app.include_router(finance_router, prefix="/api/v1")

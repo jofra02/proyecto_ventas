@@ -12,16 +12,17 @@ from core.database import Base, settings
 
 # Import ALL models here so Alembic can see them
 # This is crucial for 'autogenerate' to detect new tables
-from modules.catalog.domain.models import Product
+from modules.catalog.domain.models import Product, ProductBarcode
 from modules.inventory.domain.models import Warehouse, Batch, StockMovement
 from modules.sales.domain.models import Sale, SaleItem
 from modules.invoicing.domain.models import Document
 from modules.customers.domain.models import Customer
-from modules.payments.domain.models import Payment
 from modules.accounts_receivable.domain.models import CustomerLedger
-from modules.catalog.domain.models import Product, ProductBarcode
+from modules.finance.domain.models import CostCategory, ProductCostComponent, Payment
 from modules.picking.domain.models import PickTask, PickScanEvent
 from modules.iam.domain.models import User
+from modules.suppliers.domain.models import Supplier
+from modules.admin.domain.models import SystemSetting
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
 import Drawer from '../../components/common/Drawer';
+import api from '../../services/api';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const CustomerDrawer = ({ isOpen, onClose, customer, onSuccess }) => {
+    const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [formData, setFormData] = useState({ name: '', tax_id: '', email: '' });
     const [loading, setLoading] = useState(false);
 
@@ -30,18 +34,18 @@ const CustomerDrawer = ({ isOpen, onClose, customer, onSuccess }) => {
             onSuccess();
         } catch (err) {
             console.error(err);
-            alert("Error saving customer");
+            showNotification(t("Error saving customer"), "error");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Drawer isOpen={isOpen} onClose={onClose} title={customer ? "Edit Customer" : "New Customer"} size="md">
+        <Drawer isOpen={isOpen} onClose={onClose} title={customer ? t("Edit Customer") : t("New Customer")} size="md">
             <form onSubmit={handleSubmit} className="h-full flex flex-col">
                 <div className="flex-1 space-y-4">
                     <div className="input-group">
-                        <label>Full Name</label>
+                        <label>{t('Full Name')}</label>
                         <input
                             type="text"
                             value={formData.name}
@@ -53,29 +57,29 @@ const CustomerDrawer = ({ isOpen, onClose, customer, onSuccess }) => {
                     </div>
 
                     <div className="input-group">
-                        <label>Tax ID / NIT / VAT</label>
+                        <label>{t('Tax ID / NIT / VAT')}</label>
                         <input
                             type="text"
                             value={formData.tax_id}
                             onChange={e => setFormData({ ...formData, tax_id: e.target.value })}
-                            placeholder="Optional"
+                            placeholder={t("Optional")}
                         />
                     </div>
 
                     <div className="input-group">
-                        <label>Email Address</label>
+                        <label>{t('Email Address')}</label>
                         <input
                             type="email"
                             value={formData.email}
                             onChange={e => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="Optional"
+                            placeholder={t("Optional")}
                         />
                     </div>
                 </div>
 
                 <div className="pt-4 mt-auto border-t border-gray-100">
                     <button type="submit" className="primary-btn w-full justify-center" disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Customer'}
+                        {loading ? t('Saving...') : t('Save Customer')}
                     </button>
                 </div>
             </form>

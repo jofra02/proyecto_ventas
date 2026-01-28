@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import Modal from '../../components/common/Modal';
 import { CreditCard, Banknote, User } from 'lucide-react';
 import api from '../../services/api';
+import { useNotification } from '../../context/NotificationContext';
+import Modal from '../../components/common/Modal';
+import { useState, useEffect } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const CheckoutModal = ({ isOpen, onClose, cart, total, onComplete }) => {
+    const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [method, setMethod] = useState('cash');
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -43,7 +47,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onComplete }) => {
             const docRes = await api.post('/documents/issue', { sale_id: saleId });
 
             // 4. Register Payment
-            await api.post('/payments/', {
+            await api.post('/finance/payments/', {
                 customer_id: selectedCustomer,
                 amount: total,
                 method: method,
@@ -54,26 +58,30 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onComplete }) => {
             onClose();
         } catch (err) {
             console.error(err);
-            alert("Transaction failed. Check console.");
+            // The instruction's code edit had a malformed line here.
+            // Assuming the intent was to keep the existing message for CheckoutModal
+            // or to add a new one if it was missing.
+            // Since it already exists, we ensure it's present and correctly formatted.
+            showNotification("Transaction failed. Check console.", "error");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Complete Sale">
+        <Modal isOpen={isOpen} onClose={onClose} title={t("Complete Sale")}>
             <div className="checkout-summary">
-                <h2>Total: ${total.toFixed(2)}</h2>
+                <h2>{t("Total")}: ${total.toFixed(2)}</h2>
             </div>
 
             <div className="form-section">
-                <label><User size={16} /> Customer</label>
+                <label><User size={16} /> {t("Customer")}</label>
                 <select
                     value={selectedCustomer}
                     onChange={e => setSelectedCustomer(e.target.value)}
                     className="erp-input"
                 >
-                    <option value="">-- Walk-in Client --</option>
+                    <option value="">-- {t("Walk-in Client")} --</option>
                     {customers.map(c => (
                         <option key={c.id} value={c.id}>{c.name} ({c.tax_id || 'N/A'})</option>
                     ))}
@@ -86,28 +94,28 @@ const CheckoutModal = ({ isOpen, onClose, cart, total, onComplete }) => {
                     onClick={() => setMethod('cash')}
                 >
                     <Banknote size={24} />
-                    <span>Cash</span>
+                    <span>{t("Cash")}</span>
                 </button>
                 <button
                     className={`method-card ${method === 'transfer' ? 'active' : ''}`}
                     onClick={() => setMethod('transfer')}
                 >
                     <CreditCard size={24} />
-                    <span>Transfer</span>
+                    <span>{t("Transfer")}</span>
                 </button>
                 <button
                     className={`method-card ${method === 'account' ? 'active' : ''}`}
                     onClick={() => setMethod('account')}
                     disabled={!selectedCustomer}
-                    title={!selectedCustomer ? "Select a customer to use Current Account" : "Add to Client Debt"}
+                    title={!selectedCustomer ? t("Select a customer to use Current Account") : t("Add to Client Debt")}
                 >
                     <User size={24} />
-                    <span>On Account</span>
+                    <span>{t("On Account")}</span>
                 </button>
             </div>
 
             <button className="primary-btn pay-confirm-btn" onClick={handlePay} disabled={loading}>
-                {loading ? 'Processing...' : `Confirm Payment ($${total.toFixed(2)})`}
+                {loading ? t('Processing...') : `${t("Confirm Payment")} ($${total.toFixed(2)})`}
             </button>
 
             <style>{`

@@ -4,6 +4,7 @@ from .domain import models
 
 module = Module(
     name="catalog",
+    display_name="Products",
     router=router,
     models=[models.Product]
 )

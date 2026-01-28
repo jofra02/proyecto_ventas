@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, TrendingUp, Package, Calendar, Settings } from 'lucide-react';
+import { useLanguage } from '../../../i18n/LanguageContext';
+import { LayoutDashboard, TrendingUp, Package, Calendar } from 'lucide-react';
 
 const DashboardLayout = ({ currentView, onViewChange, children, timeRange, onTimeRangeChange }) => {
+    const { t } = useLanguage();
     const views = [
-        { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-        { id: 'sales', label: 'Sales Performance', icon: TrendingUp },
-        { id: 'inventory', label: 'Inventory Health', icon: Package },
+        { id: 'overview', label: t('Overview'), icon: LayoutDashboard },
+        { id: 'sales', label: t('Sales Performance'), icon: TrendingUp },
+        { id: 'inventory', label: t('Inventory Health'), icon: Package },
     ];
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -51,11 +52,11 @@ const DashboardLayout = ({ currentView, onViewChange, children, timeRange, onTim
                                 }
                             }}
                         >
-                            <option value="0.0104">Last 15 Minutes</option>
-                            <option value={7}>Last 7 Days</option>
-                            <option value={30}>Last 30 Days</option>
-                            <option value={90}>Last 90 Days</option>
-                            <option value="custom">Custom Range</option>
+                            <option value="0.0104">{t('Last 15 Minutes')}</option>
+                            <option value={7}>{t('Last 7 Days')}</option>
+                            <option value={30}>{t('Last 30 Days')}</option>
+                            <option value={90}>{t('Last 90 Days')}</option>
+                            <option value="custom">{t('Custom Range')}</option>
                         </select>
                     </div>
 

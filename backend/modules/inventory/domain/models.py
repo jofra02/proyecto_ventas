@@ -25,6 +25,7 @@ class Batch(Base):
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     sku = Column(String, index=True, nullable=False) # Denormalized for easier lookup
+    manufacture_date = Column(DateTime, nullable=True)
     expiry_date = Column(DateTime, nullable=True)
     received_at = Column(DateTime, default=datetime.utcnow)
 
@@ -35,6 +36,7 @@ class StockMovement(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False, index=True)
     batch_id = Column(Integer, ForeignKey("batches.id"), nullable=True) # Optional if not batch tracked
+    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True) # Source of stock (for IN movements)
     
     qty = Column(Float, nullable=False)
     type = Column(String, nullable=False) # Store Enum as string for simplicity with SQLite/Postgres compat

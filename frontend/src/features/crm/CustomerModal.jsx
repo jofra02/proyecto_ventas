@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
 import Modal from '../../components/common/Modal';
+import api from '../../services/api';
+import { useNotification } from '../../context/NotificationContext';
 
 const CustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
+    const { showNotification } = useNotification();
     const [formData, setFormData] = useState({ name: '', tax_id: '', email: '' });
     const [loading, setLoading] = useState(false);
 
@@ -30,7 +32,7 @@ const CustomerModal = ({ isOpen, onClose, customer, onSuccess }) => {
             onSuccess();
         } catch (err) {
             console.error(err);
-            alert("Error saving customer");
+            showNotification("Error saving customer", "error");
         } finally {
             setLoading(false);
         }

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/common/Modal';
+import { useNotification } from '../../context/NotificationContext';
 
 const QuickCustomerModal = ({ isOpen, onClose, onCreated }) => {
+    const { showNotification } = useNotification();
     const [name, setName] = useState("Consumidor Final");
     const [taxId, setTaxId] = useState("0");
 
@@ -16,8 +18,10 @@ const QuickCustomerModal = ({ isOpen, onClose, onCreated }) => {
             });
             onCreated(res.data);
             onClose();
+            showNotification("Customer created", "success");
         } catch (err) {
-            alert("Error creating customer");
+            console.error(err);
+            showNotification("Error creating customer", "error");
         }
     };
 

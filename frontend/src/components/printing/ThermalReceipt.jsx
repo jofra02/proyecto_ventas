@@ -2,7 +2,7 @@ import React from 'react';
 import { storeConfig } from '../../config/store';
 import { format } from 'date-fns';
 
-const ThermalReceipt = ({ sale, customer, items }) => {
+const ThermalReceipt = ({ sale, customer, items, storeInfo }) => {
     if (!sale) return null;
 
     const total = items.reduce((acc, item) => acc + (item.price * item.qty), 0);
@@ -11,10 +11,10 @@ const ThermalReceipt = ({ sale, customer, items }) => {
         <div className="thermal-receipt">
             {/* Header */}
             <div className="header">
-                <h2>{storeConfig.name}</h2>
-                <p>{storeConfig.address}</p>
-                <p>CUIT {storeConfig.cuit}</p>
-                <p>{storeConfig.iva}</p>
+                <h2>{storeInfo?.store_name || storeConfig.name}</h2>
+                <p>{storeInfo?.store_address || storeConfig.address}</p>
+                <p>CUIT {storeInfo?.store_cuit || storeConfig.cuit}</p>
+                <p>{storeInfo?.store_iva_status || storeConfig.iva}</p>
                 <p>A CONSUMIDOR FINAL</p>
                 <hr className="dashed" />
             </div>
