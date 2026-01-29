@@ -15,7 +15,7 @@ const DebtPaymentModal = ({ isOpen, onClose, customerId, currentBalance, onSucce
         try {
             // Note: We use the general /payments endpoint, but the backend service 
             // will detect the customer_id and post to the ledger automatically.
-            await api.post('/payments/', {
+            await api.post('/finance/payments/', {
                 customer_id: customerId,
                 amount: parseFloat(amount),
                 method: method,
