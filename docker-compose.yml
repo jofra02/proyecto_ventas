@@ -2,7 +2,7 @@ services:
   # Database Service (Postgres)
   db:
     image: postgres:15-alpine
-    restart: always
+    restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -17,7 +17,7 @@ services:
     build: 
       context: ./backend
       dockerfile: Dockerfile
-    restart: always
+    restart: unless-stopped
     depends_on:
       - db
     networks:
@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: /api/v1
-    restart: always
+    restart: unless-stopped
     depends_on:
       - backend
     networks:

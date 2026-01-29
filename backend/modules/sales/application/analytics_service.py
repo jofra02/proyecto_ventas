@@ -69,22 +69,14 @@ class SalesAnalyticsService:
                 points.append(current)
                 current += timedelta(days=1)
 
-        # 2. Query DB
-        # Apply Timezone Shift to created_at BEFORE formatting
-        # SQLite: datetime(created_at, modifier)
+        # 2. Query DB - Fetch Raw Data
+        # We perform aggregation in Python to ensure cross-DB compatibility (SQLite vs Postgres)
+        # especially regarding timezone shifts and date truncation functions.
         
-        shifted_time = func.datetime(Sale.created_at, time_modifier)
-
-        if is_hourly:
-            # SQLite specific for 'YYYY-MM-DD HH:00:00'
-            time_col = func.strftime('%Y-%m-%d %H:00:00', shifted_time).label("time_bucket")
-        else:
-            time_col = func.date(shifted_time).label("time_bucket")
-
         stmt = (
             select(
-                time_col,
-                func.sum(SaleItem.qty * SaleItem.price).label("revenue")
+                Sale.created_at,
+                (SaleItem.qty * SaleItem.price).label("amount")
             )
             .join(SaleItem, Sale.id == SaleItem.sale_id)
             .where(
@@ -92,20 +84,31 @@ class SalesAnalyticsService:
                 Sale.created_at >= start_date,
                 Sale.created_at <= end_date
             )
-            .group_by("time_bucket")
-            .order_by("time_bucket")
         )
         
         result = await self.db.execute(stmt)
         rows = result.all()
         
-        # 3. Transform to Dict
-        sales_map = {row.time_bucket: row.revenue for row in rows}
+        # 3. Aggregate in Python
+        sales_map = {}
         
-        # 4. Merge
+        for row in rows:
+            # Apply offset
+            initial_time = row.created_at
+            if offset_hours != 0:
+                initial_time += timedelta(hours=offset_hours)
+                
+            # Bucket
+            if is_hourly:
+                bucket_key = initial_time.strftime('%Y-%m-%d %H:00:00')
+            else:
+                bucket_key = initial_time.strftime('%Y-%m-%d')
+                
+            sales_map[bucket_key] = sales_map.get(bucket_key, 0.0) + row.amount
+        
+        # 4. Merge with expected points
         trend_data = []
         for p in points:
-            # Key generation must match SQL output format
             if is_hourly:
                 key = p.strftime('%Y-%m-%d %H:00:00')
                 label = p.strftime("%H:%M") # Hour:Minute
