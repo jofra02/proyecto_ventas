@@ -159,9 +159,12 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
 
         const priceVal = parseFloat(newPackPrice);
         if (!isNaN(priceVal) && !isNaN(sizeVal) && sizeVal > 0) {
-            const unitPrice = priceVal / sizeVal;
-            setFormData(prev => ({ ...prev, price: parseFloat(unitPrice.toFixed(2)), measurement_value: newPackSize }));
-            applyPriceToMargin(unitPrice, formData.cost_price);
+            // priceVal here represents TOTAL PACK COST
+            const unitCost = priceVal / sizeVal;
+
+            // logic: Set Cost Price -> Then Apply Margin -> Updates Sales Price
+            setFormData(prev => ({ ...prev, cost_price: parseFloat(unitCost.toFixed(2)) }));
+            applyMarginToPrice(unitCost, marginPercent);
         }
     };
 
@@ -429,7 +432,7 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                                     {formData.product_type === 'fractional' && (
                                         <div className="input-group">
                                             <label className="text-blue-800">
-                                                {t('Total Price')}
+                                                {t('Total Pack Cost')}
                                             </label>
                                             <div className="relative rounded-md shadow-sm">
                                                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
