@@ -127,6 +127,7 @@ export const es = {
     "Units per Pack": "Unidades por Pack",
     "Total Pack Weight": "Peso Total del Pack",
     "Total Weight": "Peso Total",
+    "Total Pack Cost": "Costo Total del Pack",
 
     // POS
     "Exit Sale Mode": "Salir de Punto de Venta",
