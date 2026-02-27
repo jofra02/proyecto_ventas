@@ -22,6 +22,7 @@ class ProductCreate(BaseModel):
     
     track_expiry: bool = False
     is_batch_tracked: bool = False
+    is_inventory_tracked: bool | None = True
     min_stock_level: float | None = 10.0
     unit_of_measure: str | None = "unit"
     product_type: str | None = "unitary"

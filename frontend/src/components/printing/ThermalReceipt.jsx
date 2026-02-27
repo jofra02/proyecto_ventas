@@ -9,15 +9,8 @@ const ThermalReceipt = ({ sale, customer, items, storeInfo }) => {
 
     return (
         <div className="thermal-receipt">
-            {/* Header */}
-            <div className="header">
-                <h2>{storeInfo?.store_name || storeConfig.name}</h2>
-                <p>{storeInfo?.store_address || storeConfig.address}</p>
-                <p>CUIT {storeInfo?.store_cuit || storeConfig.cuit}</p>
-                <p>{storeInfo?.store_iva_status || storeConfig.iva}</p>
-                <p>A CONSUMIDOR FINAL</p>
-                <hr className="dashed" />
-            </div>
+            {/* Header - REMOVED from top, now at bottom for continuous roll */}
+            {/* <div className="header">...</div> */}
 
             {/* Meta */}
             <div className="meta-row">
@@ -70,7 +63,27 @@ const ThermalReceipt = ({ sale, customer, items, storeInfo }) => {
                     <span>$0.00</span>
                 </div>
                 <br />
+                <br />
+                <br />
                 <p className="legal">GRACIAS POR SU COMPRA</p>
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+
+                {/* Clean spacer for 5-7mm margin (approx 25px) */}
+                <div style={{ height: '25px', width: '100%' }}></div>
+
+                {/* Header for NEXT Ticket (Continuous Roll) */}
+                <div className="header" style={{ borderTop: '1px dashed black', paddingTop: '10px' }}>
+                    <h2>{storeInfo?.store_name || storeConfig.name}</h2>
+                    <p>{storeInfo?.store_address || storeConfig.address}</p>
+                    <p>CUIT {storeInfo?.store_cuit || storeConfig.cuit}</p>
+                    <p>{storeInfo?.store_iva_status || storeConfig.iva}</p>
+                    <p>A CONSUMIDOR FINAL</p>
+                    <hr className="dashed" />
+                </div>
             </div>
         </div>
     );

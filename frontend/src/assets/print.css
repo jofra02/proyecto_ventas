@@ -7,8 +7,10 @@
     }
 
     /* Remove browser-injected margins/header/footer */
+    /* Remove browser-injected margins/header/footer */
     @page {
-        margin: 0;
+        margin: 0mm;
+        /* FORCE 0 */
         size: auto;
     }
 
@@ -35,8 +37,12 @@
         top: 0;
         width: 80mm;
         margin: 0;
-        padding: 4mm;
-        /* Left/Right padding for safe printing */
+        padding-top: 0mm;
+        /* REMOVED TOP PADDING to fix gap */
+        padding-left: 2mm;
+        padding-right: 2mm;
+        padding-bottom: 25mm;
+        /* ADDED EXTRA BOTTOM PADDING for cutter */
         box-sizing: border-box;
     }
 }
@@ -58,7 +64,18 @@
     font-size: 16px;
     font-weight: bold;
     text-align: center;
-    margin: 0 0 5px 0;
+    margin: 0 0 5px 0 !important;
+    /* FORCE 0 TOP MARGIN */
+    padding-top: 0 !important;
+}
+
+.bottom-spacer {
+    height: 40mm;
+    /* Increased to 40mm */
+    width: 100%;
+    display: block;
+    color: transparent;
+    /* Hide the dot */
 }
 
 .thermal-receipt p {

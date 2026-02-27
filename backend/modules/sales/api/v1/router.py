@@ -60,13 +60,14 @@ async def confirm_sale(sale_id: int, db: AsyncSession = Depends(get_db), current
     # Reserve Stock using Inventory Service
     stock_service = StockService(db)
     for item in sale.items:
-        # Note: In a real system, we'd check availability first
-        await stock_service.reserve_stock(
-            product_id=item.product_id,
-            warehouse_id=sale.warehouse_id,
-            qty=item.qty,
-            reference_id=f"SALE-{sale.id}"
-        )
+        # Check if product is valid and tracked
+        if item.product and item.product.is_inventory_tracked:
+            await stock_service.reserve_stock(
+                product_id=item.product_id,
+                warehouse_id=sale.warehouse_id,
+                qty=item.qty,
+                reference_id=f"SALE-{sale.id}"
+            )
     
     sale.status = SaleStatus.CONFIRMED.value
     await db.commit()

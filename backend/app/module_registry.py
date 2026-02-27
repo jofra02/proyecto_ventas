@@ -55,3 +55,6 @@ def register_modules(app: FastAPI):
     app.include_router(invoicing_router, prefix="/api/v1")
     app.include_router(customer_router, prefix="/api/v1")
     app.include_router(finance_router, prefix="/api/v1")
+    app.include_router(printing_router, prefix="/api/v1")
+
+from modules.printing.api.v1.router import router as printing_router

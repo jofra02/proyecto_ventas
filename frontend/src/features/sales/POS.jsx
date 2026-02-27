@@ -87,7 +87,8 @@ const POS = () => {
             return;
         }
 
-        if (currentQty + 1 > currentStock) {
+        // Check stock only if tracked
+        if (product.is_inventory_tracked !== false && currentQty + 1 > currentStock) {
             showNotification(t('Only {stock} {uom} available!').replace('{stock}', currentStock).replace('{uom}', t(product.unit_of_measure || 'unit')), 'warning');
             return;
         }
@@ -115,7 +116,7 @@ const POS = () => {
         const existingItem = cart.find(item => item.id === selectedFractionalProduct.id);
         const currentQty = existingItem ? existingItem.qty : 0;
 
-        if (currentQty + qty > currentStock) {
+        if (selectedFractionalProduct.is_inventory_tracked !== false && currentQty + qty > currentStock) {
             showNotification(t('Only {stock} {uom} available!').replace('{stock}', currentStock).replace('{uom}', t(selectedFractionalProduct.unit_of_measure || 'unit')), 'warning');
             return;
         }
@@ -158,7 +159,7 @@ const POS = () => {
         const currentQty = existingItem ? parseFloat(existingItem.qty) : 0;
 
         // Use a small epsilon for float comparison
-        if (currentQty + qtyToAdd > currentStock + 0.0001) {
+        if (selectedPackProduct.is_inventory_tracked !== false && currentQty + qtyToAdd > currentStock + 0.0001) {
             showNotification(t('Only {stock} available!').replace('{stock}', currentStock), 'warning');
             return;
         }
@@ -193,7 +194,7 @@ const POS = () => {
                 if (newQty < 0.001) return item; // Don't allow 0 or negative via buttons
 
                 // Check stock limit if increasing
-                if (delta > 0) {
+                if (delta > 0 && item.is_inventory_tracked !== false) {
                     const currentStock = stockMap[item.id] || 0;
                     if (newQty > currentStock) {
                         showNotification(t('Cannot add more. Stock limit: {stock} {uom}').replace('{stock}', currentStock).replace('{uom}', t(item.unit_of_measure || 'unit')), 'warning');
@@ -283,7 +284,8 @@ const POS = () => {
                         <div className="grid-products">
                             {products.map(p => {
                                 const stock = stockMap[p.id] || 0;
-                                const isOOS = stock <= 0;
+                                const isTracked = p.is_inventory_tracked !== false; // Default to true if undefined
+                                const isOOS = isTracked && stock <= 0;
                                 return (
                                     <div
                                         key={p.id}
@@ -311,13 +313,15 @@ const POS = () => {
                                                     <span className="p-price">${p.price.toFixed(2)}</span>
                                                     <span className="text-[9px] text-gray-400 -mt-1 uppercase tracking-tighter">/ {t(p.unit_of_measure || 'unit')}</span>
                                                 </div>
-                                                <span className={`p-stock ${stock < 5 ? 'low-stock' : ''}`}>
-                                                    {p.product_type === 'pack' ? (
+                                                <span className={`p-stock ${isTracked && stock < 5 ? 'low-stock' : ''}`}>
+                                                    {!isTracked ? (
+                                                        <span className="text-blue-600 font-bold">∞</span>
+                                                    ) : p.product_type === 'pack' ? (
                                                         formatPackStock(stock, p.measurement_value)
                                                     ) : (
                                                         `${stock} ${t(p.unit_of_measure || 'unit')}`
                                                     )}
-                                                    {p.product_type === 'pack' && p.measurement_value && (
+                                                    {isTracked && p.product_type === 'pack' && p.measurement_value && (
                                                         <span className="block text-[8px] opacity-75">
                                                             ({Math.round(stock * p.measurement_value)} {t('units')})
                                                         </span>
@@ -343,7 +347,8 @@ const POS = () => {
                                 <tbody>
                                     {products.map(p => {
                                         const stock = stockMap[p.id] || 0;
-                                        const isOOS = stock <= 0;
+                                        const isTracked = p.is_inventory_tracked !== false;
+                                        const isOOS = isTracked && stock <= 0;
                                         return (
                                             <tr key={p.id} className={isOOS ? 'oos-row' : ''}>
                                                 <td className="p-name-cell">
@@ -368,14 +373,16 @@ const POS = () => {
                                                 </td>
                                                 <td className="text-center">
                                                     <div className="flex flex-col items-center">
-                                                        <span className={`stock-indicator ${stock < 5 ? 'low' : ''}`}>
-                                                            {p.product_type === 'pack' ? (
+                                                        <span className={`stock-indicator ${isTracked && stock < 5 ? 'low' : ''}`}>
+                                                            {!isTracked ? (
+                                                                <span className="text-xl leading-none">∞</span>
+                                                            ) : p.product_type === 'pack' ? (
                                                                 formatPackStock(stock, p.measurement_value)
                                                             ) : (
                                                                 `${stock} ${t(p.unit_of_measure || 'unit')}`
                                                             )}
                                                         </span>
-                                                        {p.product_type === 'pack' && p.measurement_value && (
+                                                        {isTracked && p.product_type === 'pack' && p.measurement_value && (
                                                             <span className="text-[9px] text-gray-400 mt-0.5">
                                                                 ({Math.round(stock * p.measurement_value)} {t('units')})
                                                             </span>

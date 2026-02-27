@@ -26,6 +26,7 @@ class Product(Base):
     # Inventory flags
     track_expiry = Column(Boolean, default=False)
     is_batch_tracked = Column(Boolean, default=False)
+    is_inventory_tracked = Column(Boolean, default=True) # If False, stock is not checked/deducted
     min_stock_level = Column(Float, default=10.0) # Default low stock threshold
     unit_of_measure = Column(String, default="unit") # e.g. unit, kg, g, l, m
     product_type = Column(String, default="unitary") # unitary, fractional, pack

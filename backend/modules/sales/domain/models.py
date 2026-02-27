@@ -32,3 +32,4 @@ class SaleItem(Base):
     price = Column(Float, default=0.0)
 
     sale = relationship("Sale", back_populates="items")
+    product = relationship("Product", lazy="joined")
