@@ -17,6 +17,7 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
         cost_price: 0,
         track_expiry: false,
         is_batch_tracked: false,
+        is_inventory_tracked: true,
         supplier_ids: [],
         unit_of_measure: 'unit',
         product_type: 'unitary',
@@ -26,6 +27,7 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
     });
 
     const [packPrice, setPackPrice] = useState('');
+    const [packSalesPrice, setPackSalesPrice] = useState(''); // Total Sales Price state
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [marginPercent, setMarginPercent] = useState(0);
@@ -58,6 +60,7 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                     cost_price: initialData.cost_price || 0,
                     track_expiry: initialData.track_expiry || false,
                     is_batch_tracked: initialData.is_batch_tracked || false,
+                    is_inventory_tracked: initialData.is_inventory_tracked !== undefined ? initialData.is_inventory_tracked : true,
                     supplier_ids: initialData.suppliers ? initialData.suppliers.map(s => s.id) : [],
                     unit_of_measure: initialData.unit_of_measure || 'unit',
                     product_type: initialData.product_type || 'unitary',
@@ -73,12 +76,14 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                     setMarginPercent(0);
                 }
 
-                if (initialData.product_type === 'pack') {
-                    setPackPrice(initialData.price.toFixed(2));
-                } else if (initialData.measurement_value && initialData.price) {
-                    setPackPrice((initialData.price * initialData.measurement_value).toFixed(2));
+                if (initialData.product_type === 'pack' || (initialData.product_type === 'fractional' && initialData.measurement_value)) {
+                    // Populate Total Prices
+                    const weight = initialData.measurement_value || 1;
+                    setPackPrice((initialData.cost_price * weight).toFixed(2));
+                    setPackSalesPrice((initialData.price * weight).toFixed(2));
                 } else {
                     setPackPrice('');
+                    setPackSalesPrice('');
                 }
             } else {
                 setFormData({
@@ -88,6 +93,7 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                     cost_price: 0,
                     track_expiry: false,
                     is_batch_tracked: false,
+                    is_inventory_tracked: true,
                     supplier_ids: [],
                     unit_of_measure: 'unit',
                     product_type: 'unitary',
@@ -96,6 +102,7 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                     description: ''
                 });
                 setPackPrice('');
+                setPackSalesPrice('');
                 setMarginPercent(0);
             }
         }
@@ -147,26 +154,68 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
         }));
     };
 
-    const handleSmartPriceChange = (newPackPrice, newPackSize) => {
-        const sizeVal = parseFloat(newPackSize);
-        if (formData.product_type === 'pack') {
-            setFormData(prev => ({ ...prev, measurement_value: newPackSize }));
-            return;
-        }
+    const safeParseFloat = (val) => {
+        if (!val) return 0;
+        if (typeof val === 'number') return val;
+        return parseFloat(val.toString().replace(',', '.'));
+    };
 
-        setPackPrice(newPackPrice);
-        setFormData(prev => ({ ...prev, measurement_value: newPackSize }));
+    // Logic: Total Cost Abstraction
+    // The user input for 'Cost Price' represents the TOTAL COST of the item (e.g., Wheel Cost).
+    // The DB stores 'cost_price' as UNIT COST (e.g., Per Kg).
+    // This function handles the conversion.
 
-        const priceVal = parseFloat(newPackPrice);
-        if (!isNaN(priceVal) && !isNaN(sizeVal) && sizeVal > 0) {
-            // priceVal here represents TOTAL PACK COST
-            const unitCost = priceVal / sizeVal;
+    const handleTotalCostChange = (newTotalCost) => {
+        // UI shows Total Cost
+        setPackPrice(newTotalCost);
 
-            // logic: Set Cost Price -> Then Apply Margin -> Updates Sales Price
-            setFormData(prev => ({ ...prev, cost_price: parseFloat(unitCost.toFixed(2)) }));
-            applyMarginToPrice(unitCost, marginPercent);
+        const totalVal = safeParseFloat(newTotalCost);
+        const weightVal = safeParseFloat(formData.measurement_value);
+
+        if (totalVal > 0 && weightVal > 0) {
+            const newUnitCost = totalVal / weightVal;
+            const newUnitCostFixed = parseFloat(newUnitCost.toFixed(2));
+
+            // Recalculate Margin based on existing price
+            const currentSalesPrice = safeParseFloat(formData.price);
+            if (currentSalesPrice > 0) {
+                const newMargin = ((currentSalesPrice - newUnitCostFixed) / newUnitCostFixed) * 100;
+                setMarginPercent(newMargin.toFixed(1));
+            }
+
+            // Update Unit Cost in FormData
+            setFormData(prev => ({ ...prev, cost_price: newUnitCostFixed }));
         }
     };
+
+    const handleWeightChange = (newWeight) => {
+        setFormData(prev => ({ ...prev, measurement_value: newWeight }));
+
+        // If Weight changes, Total Cost stays fixed (User's rule), so Unit Cost changes.
+        // Total Cost is 'packPrice' state.
+        const totalVal = safeParseFloat(packPrice);
+        const weightVal = safeParseFloat(newWeight);
+
+        if (totalVal > 0 && weightVal > 0) {
+            const newUnitCost = totalVal / weightVal;
+            const newUnitCostFixed = parseFloat(newUnitCost.toFixed(2));
+
+            // Recalculate Margin based on existing price
+            const currentSalesPrice = safeParseFloat(formData.price);
+            if (currentSalesPrice > 0) {
+                const newMargin = ((currentSalesPrice - newUnitCostFixed) / newUnitCostFixed) * 100;
+                setMarginPercent(newMargin.toFixed(1));
+            }
+
+            setFormData(prev => ({ ...prev, cost_price: newUnitCostFixed }));
+        }
+    };
+
+    // For Unitary items only
+    const handleUnitCostChange = (val) => {
+        const newCost = safeParseFloat(val);
+        applyMarginToPrice(val, marginPercent);
+    }
 
     const toggleSupplier = (id) => {
         setFormData(prev => {
@@ -358,15 +407,31 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                                     <label>{t('Cost Price')}</label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-2.5 text-gray-400">$</span>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={formData.cost_price}
-                                            onChange={e => applyMarginToPrice(e.target.value, marginPercent)}
-                                            className="pl-7 font-bold text-gray-900"
-                                            placeholder="0.00"
-                                        />
+                                        {isWeighted ? (
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={packPrice}
+                                                onChange={e => handleTotalCostChange(e.target.value)}
+                                                className="pl-7 font-bold text-gray-900"
+                                                placeholder="0.00"
+                                            />
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={formData.cost_price}
+                                                onChange={e => handleUnitCostChange(e.target.value)}
+                                                className="pl-7 font-bold text-gray-900"
+                                                placeholder="0.00"
+                                            />
+                                        )}
                                     </div>
+                                    {isWeighted && formData.cost_price > 0 && (
+                                        <div className="text-xs text-blue-600 mt-1">
+                                            = ${formData.cost_price} / {formData.unit_of_measure}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="input-group">
                                     <label>{t('Margin (%)')}</label>
@@ -377,8 +442,12 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                                             step="0.1"
                                             value={marginPercent}
                                             onChange={e => {
-                                                setMarginPercent(e.target.value);
-                                                applyMarginToPrice(formData.cost_price, e.target.value);
+                                                if (isWeighted) {
+                                                    handleMarginChange(e.target.value);
+                                                } else {
+                                                    setMarginPercent(e.target.value);
+                                                    applyMarginToPrice(formData.cost_price, e.target.value);
+                                                }
                                             }}
                                             className="pr-8 font-bold text-emerald-600"
                                             placeholder="30"
@@ -396,18 +465,35 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                                     <span className="flex select-none items-center pl-3 pr-2 text-gray-500 font-bold bg-gray-50 rounded-l-md border-r border-gray-200 text-xl">
                                         $
                                     </span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        min="0"
-                                        className={`block flex-1 border-0 bg-transparent py-3 pl-2 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-xl sm:leading-6 font-bold ${isWeighted ? 'bg-gray-100 text-gray-500' : 'text-green-700'}`}
-                                        value={formData.price}
-                                        onChange={e => applyPriceToMargin(e.target.value, formData.cost_price)}
-                                        placeholder="0.00"
-                                        readOnly={isWeighted}
-                                    />
+                                    {isWeighted ? (
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            min="0"
+                                            className="block flex-1 border-0 bg-transparent py-3 pl-2 text-green-700 placeholder:text-gray-400 focus:ring-0 sm:text-xl sm:leading-6 font-bold"
+                                            value={packSalesPrice}
+                                            onChange={e => handleTotalSalesPriceChange(e.target.value)}
+                                            placeholder="0.00"
+                                        />
+                                    ) : (
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            min="0"
+                                            className="block flex-1 border-0 bg-transparent py-3 pl-2 text-green-700 placeholder:text-gray-400 focus:ring-0 sm:text-xl sm:leading-6 font-bold"
+                                            value={formData.price}
+                                            onChange={e => applyPriceToMargin(e.target.value, formData.cost_price)}
+                                            placeholder="0.00"
+                                        />
+                                    )}
                                 </div>
+                                {isWeighted && formData.price > 0 && (
+                                    <div className="text-xs text-green-600 mt-1 text-right font-medium">
+                                        = ${formData.price} / {formData.unit_of_measure}
+                                    </div>
+                                )}
                             </div>
 
                             {isWeighted && (
@@ -423,32 +509,14 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                                             type="number"
                                             step="any"
                                             value={formData.measurement_value}
-                                            onChange={e => handleSmartPriceChange(packPrice, e.target.value)}
+                                            onChange={e => handleWeightChange(e.target.value)}
                                             placeholder={formData.product_type === 'pack' ? "e.g. 6" : "e.g. 8"}
                                             min="0"
                                             className="bg-white border-blue-300 focus:ring-blue-200"
                                         />
                                     </div>
                                     {formData.product_type === 'fractional' && (
-                                        <div className="input-group">
-                                            <label className="text-blue-800">
-                                                {t('Total Pack Cost')}
-                                            </label>
-                                            <div className="relative rounded-md shadow-sm">
-                                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                                    <span className="text-blue-500 font-bold sm:text-sm">$</span>
-                                                </div>
-                                                <input
-                                                    type="number"
-                                                    step="any"
-                                                    value={packPrice}
-                                                    onChange={e => handleSmartPriceChange(e.target.value, formData.measurement_value)}
-                                                    placeholder="e.g. 15000"
-                                                    min="0"
-                                                    className="block w-full rounded-md border-blue-300 pl-8 py-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-blue-900"
-                                                />
-                                            </div>
-                                        </div>
+                                        <div className="hidden"></div>
                                     )}
                                 </div>
                             )}
@@ -468,35 +536,54 @@ const ProductDrawer = ({ isOpen, onClose, onRefresh, initialData }) => {
                         </h4>
 
                         <div className="flex flex-col gap-3">
-                            <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                            <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors bg-blue-50/30">
                                 <input
                                     type="checkbox"
                                     className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    checked={formData.track_expiry}
-                                    onChange={e => setFormData({ ...formData, track_expiry: e.target.checked })}
+                                    checked={formData.is_inventory_tracked ?? true}
+                                    onChange={e => setFormData({ ...formData, is_inventory_tracked: e.target.checked })}
                                 />
                                 <div>
-                                    <span className="block text-sm font-medium text-gray-900">{t('Track Expiry Date')}</span>
+                                    <span className="block text-sm font-bold text-gray-900">{t('Track Stock Level')}</span>
                                     <span className="text-xs text-gray-500 leading-tight">
-                                        {t('Enables expiry date entry when receiving stock. Useful for perishable goods.')}
+                                        {t('Uncheck for services or items sold without inventory limits.')}
                                     </span>
                                 </div>
                             </label>
 
-                            <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
-                                <input
-                                    type="checkbox"
-                                    className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    checked={formData.is_batch_tracked}
-                                    onChange={e => setFormData({ ...formData, is_batch_tracked: e.target.checked })}
-                                />
-                                <div>
-                                    <span className="block text-sm font-medium text-gray-900">{t('Batch / Lot Tracking')}</span>
-                                    <span className="text-xs text-gray-500 leading-tight">
-                                        {t('Track Manufacture Dates and Batch Codes for traceability.')}
-                                    </span>
-                                </div>
-                            </label>
+                            {formData.is_inventory_tracked !== false && (
+                                <>
+                                    <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            checked={formData.track_expiry}
+                                            onChange={e => setFormData({ ...formData, track_expiry: e.target.checked })}
+                                        />
+                                        <div>
+                                            <span className="block text-sm font-medium text-gray-900">{t('Track Expiry Date')}</span>
+                                            <span className="text-xs text-gray-500 leading-tight">
+                                                {t('Enables expiry date entry when receiving stock. Useful for perishable goods.')}
+                                            </span>
+                                        </div>
+                                    </label>
+
+                                    <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            checked={formData.is_batch_tracked}
+                                            onChange={e => setFormData({ ...formData, is_batch_tracked: e.target.checked })}
+                                        />
+                                        <div>
+                                            <span className="block text-sm font-medium text-gray-900">{t('Batch / Lot Tracking')}</span>
+                                            <span className="text-xs text-gray-500 leading-tight">
+                                                {t('Track Manufacture Dates and Batch Codes for traceability.')}
+                                            </span>
+                                        </div>
+                                    </label>
+                                </>
+                            )}
                         </div>
 
                         <div className="mt-4 flex items-start gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-md">

@@ -1,14 +1,50 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { ArrowLeft, Search, LogOut } from 'lucide-react';
+import { ArrowLeft, Search, LogOut, Printer, Settings, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import Modal from '../../components/common/Modal';
+import PrinterSettings from '../printing/PrinterSettings';
 
 const POSLayout = ({ children }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const isEmployee = user?.role === 'EMPLOYEE';
+  const [showSettings, setShowSettings] = useState(false);
+  const [bridgeStatus, setBridgeStatus] = useState('unknown'); // online, offline, disabled
+
+  // Check bridge status on mount
+  useEffect(() => {
+    const checkBridge = async () => {
+      const configStr = localStorage.getItem('printerConfig');
+      if (!configStr) {
+        setBridgeStatus('disabled');
+        return;
+      }
+      const config = JSON.parse(configStr);
+      if (!config.enabled) {
+        setBridgeStatus('disabled');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${config.bridgeUrl || 'http://localhost:3001'}/health`);
+        if (res.ok) {
+          setBridgeStatus('online');
+        } else {
+          setBridgeStatus('offline');
+        }
+      } catch (e) {
+        setBridgeStatus('offline');
+      }
+    };
+
+    checkBridge();
+    // Poll every 10s
+    const interval = setInterval(checkBridge, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="pos-shell">
@@ -25,7 +61,25 @@ const POSLayout = ({ children }) => {
             <input type="text" placeholder={t('Scan barcode or search item...')} autoFocus />
           </div>
         </div>
-        <div className="pos-info">
+        <div className="pos-info flex items-center gap-4">
+
+          {/* Printer Status Badge */}
+          {bridgeStatus === 'offline' && (
+            <div className="flex items-center gap-1 bg-red-500/20 text-red-400 px-2 py-1 rounded text-xs font-bold border border-red-500/30">
+              <AlertTriangle size={12} />
+              <span>Bridge Offline</span>
+            </div>
+          )}
+
+          {/* Printer Settings Button */}
+          <button
+            className={`icon-btn transition-colors ${bridgeStatus === 'online' ? 'text-green-400' : 'text-gray-400 hover:text-white'}`}
+            onClick={() => setShowSettings(true)}
+            title={t('Printer Settings')}
+          >
+            <Printer size={20} />
+          </button>
+
           {isEmployee ? (
             <button className="logout-btn-pos" onClick={logout}>
               <LogOut size={16} /> {t('Logout')}
@@ -39,6 +93,14 @@ const POSLayout = ({ children }) => {
       <main className="pos-content">
         {children}
       </main>
+
+      <Modal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        title={t('Printer Setup')}
+      >
+        <PrinterSettings />
+      </Modal>
 
       <style>{`
         .pos-shell {

@@ -128,14 +128,17 @@ const ProductList = () => {
                         ${(p.price / p.measurement_value).toFixed(2)} / {t('unit')}
                       </span>
                     </div>
-                  ) : p.product_type === 'fractional' && p.measurement_value ? (
+                  ) : p.product_type === 'fractional' ? (
                     <div className="flex flex-col">
                       <span className="font-mono font-bold text-gray-900 text-base">
-                        ${(p.price * p.measurement_value).toFixed(2)}
+                        ${p.price.toFixed(2)}
                       </span>
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        ${p.price.toFixed(2)} / {t(p.unit_of_measure)}
-                      </span>
+                      {p.measurement_value && (
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          Ref: {p.measurement_value} {p.measurement_unit} avg
+                        </span>
+                      )}
+                      <div className="text-[10px] text-gray-400 uppercase tracking-tighter">/ {t(p.unit_of_measure || 'unit')}</div>
                     </div>
                   ) : (
                     <div>
