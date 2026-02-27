@@ -1,13 +1,36 @@
 from fastapi import FastAPI
 from core.config import get_settings
 from app.module_registry import registry
+from contextlib import asynccontextmanager
+from core.database import SessionLocal
+from sqlalchemy import select
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Seed defaults
+    try:
+        from modules.inventory.domain.models import Warehouse
+        async with SessionLocal() as db:
+            stmt = select(Warehouse).where(Warehouse.id == 1)
+            result = await db.execute(stmt)
+            if not result.scalars().first():
+                new_wh = Warehouse(id=1, name="Almacén Principal", is_default=True)
+                db.add(new_wh)
+                await db.commit()
+                print("--- Seeded Default Warehouse (ID=1) ---")
+    except Exception as e:
+        print(f"Failed to seed db: {e}")
+        
+    yield
+    # Shutdown logic if any
 
 settings = get_settings()
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
-        openapi_url=f"{settings.API_V1_STR}/openapi.json"
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        lifespan=lifespan
     )
     
     from fastapi.middleware.cors import CORSMiddleware
